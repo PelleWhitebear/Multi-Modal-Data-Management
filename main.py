@@ -20,10 +20,12 @@ def main():
     landing_zone_bucket = "landing-zone"
     temporal_landing_sub_bucket = "temporal_landing"
     persistent_landing_sub_bucket = "persistent_landing"
+    repeated_sub_bucket = "temporal_landing" # Test already existing sub-bucket
 
     create_bucket(s3_client, landing_zone_bucket)
     create_sub_bucket(s3_client, landing_zone_bucket, temporal_landing_sub_bucket)
     create_sub_bucket(s3_client, landing_zone_bucket, persistent_landing_sub_bucket)
+    create_sub_bucket(s3_client, landing_zone_bucket, repeated_sub_bucket)
 
 
 
