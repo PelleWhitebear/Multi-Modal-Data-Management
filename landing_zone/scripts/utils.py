@@ -3,6 +3,8 @@ import logging
 from datetime import datetime
 from botocore.exceptions import ClientError
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - [%(levelname)s] - %(message)s')
+
 def create_bucket(s3_client, bucket):
     """Create an S3 bucket. Slighty modified version of this, now also handling already exisiting buckets:
     https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-example-creating-buckets.html#create-an-amazon-s3-bucket
@@ -15,12 +17,12 @@ def create_bucket(s3_client, bucket):
     # Create bucket
     try:
         s3_client.create_bucket(Bucket=bucket)
-        print(f"Bucket '{bucket}' created.")
+        logging.info(f"Bucket '{bucket}' created.")
     except ClientError as e:
         if e.response["Error"]["Code"] == "BucketAlreadyOwnedByYou":
-            print(f"Bucket '{bucket}' already exists.")
+            logging.info(f"Bucket '{bucket}' already exists.")
         else:
-            logging.error(e)
+            logging.error(f"Unexpected error creating bucket '{bucket}': {e}")
             return False
     return True
 
@@ -36,18 +38,18 @@ def create_sub_bucket(s3_client, bucket, key):
     try:
         # Check if sub-bucket exists, if not error, it does. Sub-buckets are not real buckets, but prefixes inside a bucket.
         s3_client.head_object(Bucket=bucket, Key=f"{key}/")
-        print(f"Sub-bucket '{key}' already exists.")
+        logging.info(f"Sub-bucket '{key}' already exists.")
         return False
     
     except ClientError as e:
         # If error is 404, then bucket does not exist.
         if e.response["Error"]["Code"] == "404":
             s3_client.put_object(Bucket=bucket, Key=f"{key}/")
-            print(f"Sub-bucket '{key}' created.")
+            logging.info(f"Sub-bucket '{key}' created.")
             return True
         
         else:
-            logging.error(e)
+            logging.error(f"Unexpected error creating sub-bucket '{key}': {e}")
             return False
         
 def ingest_data(s3_client, bucket, sub_bucket, data_folder):
@@ -67,17 +69,17 @@ def ingest_data(s3_client, bucket, sub_bucket, data_folder):
         # Check if key exist in bucket
         try:
             s3_client.head_object(Bucket=bucket, Key=key)
-            print(f"Skipping already uploaded file: {filename}")
+            logging.info(f"Skipping already uploaded file: {filename}")
             continue
         except ClientError as e:
             if e.response["Error"]["Code"] != "404":
-                print(f"Error checking {filename}: {e}")
+                logging.error(f"Error checking {filename}: {e}")
                 continue
 
         # Upload the file
         try:
             s3_client.upload_file(path, bucket, key)
-            print(f"Uploaded {filename} to {bucket}/{key}")
+            logging.info(f"Uploaded {filename} to {bucket}/{key}")
         except Exception as e:
             logging.error(e)
 
@@ -89,7 +91,7 @@ def move_to_persistent(s3_client, bucket, temporal_sub_bucket, persistent_sub_bu
     objects = s3_client.list_objects_v2(Bucket=bucket, Prefix=f"{temporal_sub_bucket}/")
 
     if "Contents" not in objects:
-        print("No files in temporal landing zone.")
+        logging.info("No files in temporal landing zone.")
         return
 
     for obj in objects["Contents"]:
@@ -100,7 +102,7 @@ def move_to_persistent(s3_client, bucket, temporal_sub_bucket, persistent_sub_bu
         # New name with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = key.split("/")[-1]
-        new_key = f"{persistent_sub_bucket}/{data_source}/{data_source}_{timestamp}_{filename}"
+        new_key = f"{persistent_sub_bucket}/{data_source}/{data_source}#{timestamp}#{filename}"
 
         # Copy and move to persistent
         try:
@@ -109,7 +111,7 @@ def move_to_persistent(s3_client, bucket, temporal_sub_bucket, persistent_sub_bu
                 CopySource={"Bucket": bucket, "Key": key},
                 Key=new_key
             )
-            print(f"Moved {filename} from {key} to {new_key}")
+            logging.info(f"Moved {filename} from {key} to {new_key}")
         except Exception as e:
             logging.error(e)
             continue
@@ -117,6 +119,6 @@ def move_to_persistent(s3_client, bucket, temporal_sub_bucket, persistent_sub_bu
         # Delete from temporal
         try:
             s3_client.delete_object(Bucket=bucket, Key=key)
-            print(f"Deleted {key} from temporal landing.")
+            logging.info(f"Deleted {key} from temporal landing.")
         except Exception as e:
             logging.error(e)
