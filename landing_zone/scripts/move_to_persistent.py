@@ -18,7 +18,7 @@ def main():
         logging.info("Connected to MinIO.")
 
         try:
-            move_to_persistent(s3_client, LANDING_ZONE_BUCKET, TEMPORAL_SUB_BUCKET, PERSISTENT_SUB_BUCKET)
+            move_to_persistent(s3_client, LANDING_ZONE_BUCKET, TEMPORAL_SUB_BUCKET, PERSISTENT_SUB_BUCKET, DATA_FOLDER)
             
         except Exception as e:
             logging.error(f"Error during moving data to persistent storage: {e}")
