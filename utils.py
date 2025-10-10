@@ -1,6 +1,6 @@
 import os
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from botocore.exceptions import ClientError
 
 def create_bucket(s3_client, bucket):
@@ -98,7 +98,7 @@ def move_to_persistent(s3_client, bucket, temporal_sub_bucket, persistent_sub_bu
             continue
 
         # New name with timestamp
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = key.split("/")[-1]
         new_key = f"{persistent_sub_bucket}/{data_source}/{data_source}_{timestamp}_{filename}"
 
