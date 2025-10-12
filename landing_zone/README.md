@@ -22,7 +22,7 @@ The principal structure of the Landing Zone goes as follows:
 
 - Primary bucket: `landing-zone` 
 - Temporal sub-bucket: `temporal_landing`
-  - Temporary stores new raw data inputs as they get loaded incrementally.
+  - Temporary stores new raw data inputs as they get loaded incrementally. We also keep backup files, created during the data loading that will get deleted when the final JSON files get moved to the persistent landing zone.
 - Persistent sub-bucket: `persistent_landing`
   - Persistently archives all raw data inputs following preset naming conventions and classifications awaiting further processing.
 
@@ -30,6 +30,8 @@ Example:
 
 - `landing-zone` 
   - `temporal_landing`
+    - `steam_games.bak`
+    - `steamspy_games.bak`
     - `steam_games.json`
     - `steamspy_games.json`
     - `060152_img_1.png`
