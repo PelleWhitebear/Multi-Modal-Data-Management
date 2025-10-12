@@ -3,7 +3,11 @@ import logging
 from utils import *
 from consts import *
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - [%(levelname)s] - %(message)s')
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - [%(levelname)s] - %(message)s', 
+                    filename='landing_zone/logs/delete.log', 
+                    force=True,
+                    filemode='w')  # Overwrite log file on each run
 
 def main():
 
@@ -11,9 +15,9 @@ def main():
     try:
         s3_client = boto3.client(
             "s3",
-            endpoint_url="http://localhost:9000",
-            aws_access_key_id="ROOTNAME",
-            aws_secret_access_key="CHANGEME123",
+            endpoint_url=ENDPOINT_URL,
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
         )
         logging.info("Connected to MinIO.")
 
@@ -25,29 +29,19 @@ def main():
                 logging.info("No buckets found. MinIO is already empty.")
                 return
             
-            for b in buckets:
-                name = b["Name"]
-                logging.info(f"Deleting bucket: {name}")
-
-                # Delete all objects inside
-                objects = s3_client.list_objects_v2(Bucket=name)
-                if "Contents" in objects:
-                    for obj in objects["Contents"]:
-                        s3_client.delete_object(Bucket=name, Key=obj["Key"])
-                        logging.info(f"  Deleted object: {obj['Key']}")
-
-                # Delete the bucket itself
-                s3_client.delete_bucket(Bucket=name)
-                logging.info(f"  Bucket '{name}' deleted.")
+            for bucket in buckets:
+                delete_bucket_elements(s3_client, bucket)
+                s3_client.delete_bucket(Bucket=bucket["Name"])
+                logging.info(f"Bucket '{bucket['Name']}' deleted.")
 
             logging.info("All data removed. MinIO is empty.")
 
-        except Exception as e:
-            logging.error(f"Error during deletion process: {e}")
+        except Exception:
+            logging.exception(f"Error during deletion process.")
             return
 
-    except Exception as e:
-        logging.error(f"Error connecting to MinIO: {e}")
+    except Exception:
+        logging.exception(f"Error connecting to MinIO.")
         return
     
 
