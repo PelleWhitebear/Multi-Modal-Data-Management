@@ -7,7 +7,7 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - [%(levelname)s] - %(message)s', 
                     filename='landing_zone/logs/create.log', 
                     force=True,
-                    filemode='w')
+                    filemode='w')   # Overwrite log file on each run
 
 def main():
 

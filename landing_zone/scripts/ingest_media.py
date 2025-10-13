@@ -10,6 +10,7 @@ import requests
 import json
 import urllib3
 from tqdm import tqdm
+import io
 
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - [%(levelname)s] - %(message)s', 

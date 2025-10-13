@@ -12,13 +12,13 @@ ingest_games_t0=$(date +%s)
 python3 landing_zone/scripts/ingest_games.py \
     --steam-outfile steam_games.json \
     --steamspy-outfile steam_games_spy.json \
-    --sleep 3 --retries 5 --autosave 10
+    --sleep 3 --retries 5 --autosave 10 --timeout 30
 ingest_games_t1=$(date +%s)
 echo "Game data ingestion completed."
 
 echo "Ingesting media files..."
 ingest_media_t0=$(date +%s)
-python3 landing_zone/scripts/ingest_media.py --sleep 3 --timeout 5 --retries 5
+python3 landing_zone/scripts/ingest_media.py --sleep 4 --timeout 5 --retries 5
 ingest_media_t1=$(date +%s)
 echo "Media files ingestion completed."
 
@@ -28,8 +28,7 @@ python3 landing_zone/scripts/move_to_persistent.py
 move_to_persistent_t1=$(date +%s)
 echo "Landing zone ingestion process completed."
 
-end_time=$(date +%s)
-elapsed=$(( end_time - create_t0 ))
+elapsed=$(( move_to_persistent_t1 - create_t0 ))
 echo "Time taken for bucket creation: $((create_t1 - create_t0)) seconds."
 echo "Time taken for game data ingestion: $((ingest_games_t1 - ingest_games_t0)) seconds."
 echo "Time taken for media files ingestion: $((ingest_media_t1 - ingest_media_t0)) seconds."

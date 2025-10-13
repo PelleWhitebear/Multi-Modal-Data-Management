@@ -77,7 +77,7 @@ def DoRequest(url, parameters=None, retryTime=5, successCount=0, errorCount=0, r
   except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError,
           requests.exceptions.Timeout, requests.exceptions.RequestException,
           SSLError) as ex:
-    logging.exception(f'An exception of type {type(ex).__name__} ocurred.')
+    logging.exception(f'An exception of type {type(ex).__name__} ocurred while fetching data for {url}.')
     response = None
 
   if response and response.status_code == 200:
@@ -348,23 +348,21 @@ def main():
     logging.info("Connected to MinIO.")
 
     # Preparation for incremental data ingestion
+    steam_dataset = {}
+    steamspy_dataset = {}
+
     try:
-        steam_dataset = {}
-        steamspy_dataset = {}
-
-        try:
-          Scraper(s3_client, steam_dataset, steamspy_dataset, args, appIDs=VALID_IDS)
-        
-        except (KeyboardInterrupt, SystemExit):
-          UploadJSON(s3_client, steam_dataset, args.steam_outfile, args.autosave > 0)
-          UploadJSON(s3_client, steamspy_dataset, args.steamspy_outfile, args.autosave > 0)
-
-        logging.info('Done')
-
+      Scraper(s3_client, steam_dataset, steamspy_dataset, args, appIDs=VALID_IDS)
+    
+    except (KeyboardInterrupt, SystemExit):
+      UploadJSON(s3_client, steam_dataset, args.steam_outfile, args.autosave > 0)
+      UploadJSON(s3_client, steamspy_dataset, args.steamspy_outfile, args.autosave > 0)
     except Exception:
       logging.exception(f"Error during data ingestion.")
       return
-
+    
+    logging.info('Done')
+    
   except Exception:
       logging.exception(f"Error connecting to MinIO.")
       return
@@ -377,6 +375,7 @@ if __name__ == "__main__":
   parser.add_argument('-s', '--sleep',    type=float, default=DEFAULT_SLEEP,    help='Waiting time between requests')
   parser.add_argument('-r', '--retries',  type=int,   default=DEFAULT_RETRIES,  help='Number of retries (0 to always retry)')
   parser.add_argument('-a', '--autosave', type=int,   default=DEFAULT_AUTOSAVE, help='Record the data every number of new entries (0 to deactivate)')
+  parser.add_argument('-t', '--timeout',  type=float, default=DEFAULT_TIMEOUT,  help='Timeout for each request')
   args = parser.parse_args()
   random.seed(time.time())
 

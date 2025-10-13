@@ -11,7 +11,8 @@ The Landing Zone is the first stop for our data, where it is stored in its raw f
 - [Available Scripts](#available-scripts)
   - [`create.py`](#createpy)
   - [`delete.py`](#deletepy)
-  - [`ingest.py`](#ingestpy)
+  - [`ingest_games.py`](#ingest_gamespy)
+  - [`ingest_media.py`](#ingest_mediapy)
   - [`move_to_persistent.py`](#move_to_persistentpy)
   - [`consts.py` and `utils.py`](#constspy-and-utilspy)
 
@@ -83,8 +84,11 @@ Scripts can be found under `landing_zone/scripts`. These cover, in a very modula
 ### `delete.py`
 - Deletes all buckets and elements inside them, since MinIO does not allow deletion in its Web UI.
 
-### `ingest.py`
-- Meant to be executed periodically, ingests a new and updated set of data inputs, saving them in the temporal landing zone.
+### `ingest_games.py`
+- Meant to be executed periodically, ingests a new and updated set of videogame data inputs, saving them in the temporal landing zone.
+
+### `ingest_media.py`
+- Meant to be executed periodically, ingests a new and updated set of media data inputs, saving them in the temporal landing zone.
 
 ### `move_to_persistent.py`
 - Moves all elements inside the temporal landing zone to the persistent landing zone, deleting everything from the former when done.
