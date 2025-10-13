@@ -1,7 +1,13 @@
+import os
 import boto3
 import logging
 from utils import *
 from consts import *
+
+log_dir = os.path.join(os.path.dirname(__file__), '..', 'logs')
+os.makedirs(log_dir, exist_ok=True)  # Create logs directory if it doesn't exist
+
+log_file = os.path.join(log_dir, 'delete.log')
 
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - [%(levelname)s] - %(message)s', 
