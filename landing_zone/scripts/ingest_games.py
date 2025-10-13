@@ -35,11 +35,7 @@ import boto3
 import json
 import io
 
-logging.basicConfig(level=logging.INFO, 
-                    format='%(asctime)s - [%(levelname)s] - %(message)s', 
-                    filename='landing_zone/logs/ingest_games.log', 
-                    force=True,
-                    filemode='w')  # Overwrite log file on each run
+setup_logging("ingest_games.log")
 
 def SanitizeText(text):
   '''

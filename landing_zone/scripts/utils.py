@@ -1,3 +1,4 @@
+import os
 import logging
 from datetime import datetime
 from botocore.exceptions import ClientError, BotoCoreError
@@ -82,7 +83,6 @@ def delete_bucket_elements(s3_client, bucket):
         return False
     return True
 
-
 def ingest_data(s3_client, bucket, fileobj, key):
     """
     Upload new files from data folder to the temporal sub bucket.
@@ -155,7 +155,6 @@ def ingest_data(s3_client, bucket, fileobj, key):
             logging.exception(f"Unexpected error uploading {key} to {bucket}.")
             return False
 
-
 def move_to_persistent(s3_client, bucket, temporal_sub_bucket, persistent_sub_bucket, data_source):
     """
     Move files from temporal landing to persistent landing, applying naming convention.
@@ -195,3 +194,29 @@ def move_to_persistent(s3_client, bucket, temporal_sub_bucket, persistent_sub_bu
             logging.info(f"Deleted {key} from temporal landing.")
         except Exception as e:
             logging.error(e)
+
+def setup_logging(log_filename: str, level=logging.INFO, filemode='w'):
+    """
+    Sets up logging with a file in landing_zone/logs/.
+    Ensures the logs directory exists.
+
+    Parameters:
+        :param log_filename (str): Name of the log file, e.g., 'delete.log'.
+        :param level (int, optional): Logging level, default is logging.INFO.
+        :param filemode (str, optional): 'w' to overwrite or 'a' to append, default is 'w'.
+    """
+    # Ensure logs directory exists
+    log_dir = os.path.join(os.path.dirname(__file__), '..', 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+
+    # Full path to log file
+    log_file = os.path.join(log_dir, log_filename)
+
+    # Configure logging
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s - [%(levelname)s] - %(message)s',
+        filename=log_file,
+        filemode=filemode,
+        force=True  # override any existing config
+    )
