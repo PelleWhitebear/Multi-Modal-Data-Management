@@ -3,7 +3,7 @@ import logging
 from utils import *
 from consts import *
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - [%(levelname)s] - %(message)s')
+setup_logging("create.log")
 
 def main():
 
@@ -11,24 +11,19 @@ def main():
     try:
         s3_client = boto3.client(
             "s3",
-            endpoint_url="http://localhost:9000",
-            aws_access_key_id="ROOTNAME",
-            aws_secret_access_key="CHANGEME123",
+            endpoint_url=ENDPOINT_URL,
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
         )
         logging.info("Connected to MinIO.")
 
-        try:        
-            # Create the bucket and the sub-buckets
-            create_bucket(s3_client, LANDING_ZONE_BUCKET)
-            create_sub_bucket(s3_client, LANDING_ZONE_BUCKET, TEMPORAL_SUB_BUCKET)
-            create_sub_bucket(s3_client, LANDING_ZONE_BUCKET, PERSISTENT_SUB_BUCKET)
-        
-        except Exception as e:
-            logging.error(f"Error during bucket creation: {e}")
-            return
+        # Create the bucket and the sub-buckets
+        create_bucket(s3_client, LANDING_ZONE_BUCKET)
+        create_sub_bucket(s3_client, LANDING_ZONE_BUCKET, TEMPORAL_SUB_BUCKET)
+        create_sub_bucket(s3_client, LANDING_ZONE_BUCKET, PERSISTENT_SUB_BUCKET)
 
-    except Exception as e:
-        logging.error(f"Error connecting to MinIO: {e}")
+    except Exception:
+        logging.exception("Error connecting to MinIO.")
         return
     
 

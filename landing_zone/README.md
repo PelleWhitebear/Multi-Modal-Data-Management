@@ -11,7 +11,8 @@ The Landing Zone is the first stop for our data, where it is stored in its raw f
 - [Available Scripts](#available-scripts)
   - [`create.py`](#createpy)
   - [`delete.py`](#deletepy)
-  - [`ingest.py`](#ingestpy)
+  - [`ingest_games.py`](#ingest_gamespy)
+  - [`ingest_media.py`](#ingest_mediapy)
   - [`move_to_persistent.py`](#move_to_persistentpy)
   - [`consts.py` and `utils.py`](#constspy-and-utilspy)
 
@@ -22,7 +23,7 @@ The principal structure of the Landing Zone goes as follows:
 
 - Primary bucket: `landing-zone` 
 - Temporal sub-bucket: `temporal_landing`
-  - Temporary stores new raw data inputs as they get loaded incrementally.
+  - Temporary stores new raw data inputs as they get loaded incrementally. We also keep backup files, created during the data loading that will get deleted when the final JSON files get moved to the persistent landing zone.
 - Persistent sub-bucket: `persistent_landing`
   - Persistently archives all raw data inputs following preset naming conventions and classifications awaiting further processing.
 
@@ -30,6 +31,8 @@ Example:
 
 - `landing-zone` 
   - `temporal_landing`
+    - `steam_games.bak`
+    - `steamspy_games.bak`
     - `steam_games.json`
     - `steamspy_games.json`
     - `060152_img_1.png`
@@ -81,8 +84,11 @@ Scripts can be found under `landing_zone/scripts`. These cover, in a very modula
 ### `delete.py`
 - Deletes all buckets and elements inside them, since MinIO does not allow deletion in its Web UI.
 
-### `ingest.py`
-- Meant to be executed periodically, ingests a new and updated set of data inputs, saving them in the temporal landing zone.
+### `ingest_games.py`
+- Meant to be executed periodically, ingests a new and updated set of videogame data inputs, saving them in the temporal landing zone.
+
+### `ingest_media.py`
+- Meant to be executed periodically, ingests a new and updated set of media data inputs, saving them in the temporal landing zone.
 
 ### `move_to_persistent.py`
 - Moves all elements inside the temporal landing zone to the persistent landing zone, deleting everything from the former when done.
