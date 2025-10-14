@@ -107,7 +107,7 @@ def SteamRequest(appID, retryTime, successRequestCount, errorRequestCount, retri
   '''
   url = "http://store.steampowered.com/api/appdetails/"
   response = DoRequest(url, {"appids": appID, "cc": currency, "l": language}, retryTime, successRequestCount, errorRequestCount, retries)
-  if response:
+  if response.status_code == 200 and response.text.strip():
     try:
       data = response.json()
       app = data[appID]
@@ -123,9 +123,11 @@ def SteamRequest(appID, retryTime, successRequestCount, errorRequestCount, retri
         return app['data']
     except Exception as ex:
       logging.exception(f'An exception of type {type(ex).__name__} ocurred.')
+      logging.error(f"url: {url}")
+      logging.error(f"Response text (first 200 chars): {response.text[:200]!r}")
       return None
   else:
-    logging.error('Bad response')
+    logging.error(f"Bad or empty response from {url}: {response.status_code}")
     return None
 
 def SteamSpyRequest(appID, retryTime, successRequestCount, errorRequestCount, retries):
