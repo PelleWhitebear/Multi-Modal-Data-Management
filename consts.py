@@ -7,6 +7,7 @@ AWS_SECRET_ACCESS_KEY = "CHANGEME123"
 LANDING_ZONE_BUCKET = "landing-zone"
 TEMPORAL_SUB_BUCKET = "temporal_landing"
 PERSISTENT_SUB_BUCKET = "persistent_landing"
+FORMATTED_ZONE_BUCKET = "formatted-zone"
 
 # IDs for best 100 games
 VALID_IDS = [ "1687950", "632470", "271590", "7670", "220", "70", "659", "620", "2310", "1245620", 
