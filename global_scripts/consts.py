@@ -3,11 +3,16 @@ ENDPOINT_URL = "http://localhost:9000"
 AWS_ACCESS_KEY_ID = "ROOTNAME"
 AWS_SECRET_ACCESS_KEY = "CHANGEME123"
 
-# Buckets and sub-buckets:
+# Buckets and sub-buckets (landing zone):
 LANDING_ZONE_BUCKET = "landing-zone"
 TEMPORAL_SUB_BUCKET = "temporal_landing"
 PERSISTENT_SUB_BUCKET = "persistent_landing"
+
+# Buckets and sub-buckets (formatted-zone):
 FORMATTED_ZONE_BUCKET = "formatted-zone"
+JSON_SUB_BUCKET = "json"
+MEDIA_SUB_BUCKET = "media"
+
 
 # IDs for best 100 games
 VALID_IDS = [ "1687950", "632470", "271590", "7670", "220", "70", "659", "620", "2310", "1245620", 

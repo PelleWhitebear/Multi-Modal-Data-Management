@@ -33,7 +33,7 @@ import boto3
 import json
 import io
 
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../global_scripts'))
 sys.path.append(parent_dir)
 from utils import *
 from consts import *

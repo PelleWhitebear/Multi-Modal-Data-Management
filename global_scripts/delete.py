@@ -1,10 +1,5 @@
-import sys
-import os
 import boto3
 import logging
-
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-sys.path.append(parent_dir)
 from utils import *
 from consts import *
 
