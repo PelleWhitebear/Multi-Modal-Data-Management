@@ -1,9 +1,8 @@
 import boto3
 import logging
-from utils import *
-from consts import *
 import argparse
 import sys
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import requests
@@ -11,6 +10,11 @@ import json
 import urllib3
 from tqdm import tqdm
 import io
+
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.append(parent_dir)
+from utils import *
+from consts import *
 
 setup_logging("ingest_media.log")
 

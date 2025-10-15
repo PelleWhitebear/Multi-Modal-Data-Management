@@ -29,11 +29,14 @@ import argparse
 import random
 import logging
 from tqdm import tqdm
-from consts import *
-from utils import *
 import boto3
 import json
 import io
+
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.append(parent_dir)
+from utils import *
+from consts import *
 
 setup_logging("ingest_games.log")
 
