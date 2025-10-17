@@ -5,4 +5,4 @@ requests
 Pillow
 pillow-heif
 jupyterlab
-moviepy
+moviepy==1.0.3
