@@ -1,5 +1,5 @@
 # MinIO connection:
-ENDPOINT_URL = "http://localhost:9000"
+ENDPOINT_URL = "http://minio:9000"
 AWS_ACCESS_KEY_ID = "ROOTNAME"
 AWS_SECRET_ACCESS_KEY = "CHANGEME123"
 

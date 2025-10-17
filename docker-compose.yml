@@ -6,8 +6,36 @@ services:
       - "9000:9000"
       - "9001:9001"
     volumes:
-      - ~/minio/data:/data
+      - minio_data:/data
     environment:
       MINIO_ROOT_USER: ROOTNAME
       MINIO_ROOT_PASSWORD: CHANGEME123
     command: server /data --console-address ":9001"
+
+  # chroma:
+  #   image: chromadb/chroma
+  #   container_name: chroma
+  #   ports:
+  #     - "8000:8000"
+  #   volumes:
+  #     - chroma_data:/chroma
+
+  pipeline:
+    build: .
+    container_name: pipeline
+    depends_on:
+      - minio
+      # - chroma
+    volumes:
+      - ./:/app
+    environment:
+      MINIO_URL: http://minio:9000
+      MINIO_ACCESS_KEY: ROOTNAME
+      MINIO_SECRET_KEY: CHANGEME123
+      # CHROMA_URL: http://chroma:8000
+    stdin_open: true
+    tty: true
+
+volumes:
+  minio_data:
+  # chroma_data:
