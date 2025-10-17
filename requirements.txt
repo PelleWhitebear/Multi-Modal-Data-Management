@@ -2,3 +2,7 @@ boto3
 botocore
 tqdm
 requests
+Pillow
+pillow-heif
+jupyterlab
+moviepy
