@@ -26,13 +26,6 @@ services:
     depends_on:
       - minio
       # - chroma
-    volumes:
-      - ./:/app
-    environment:
-      MINIO_URL: http://minio:9000
-      MINIO_ACCESS_KEY: ROOTNAME
-      MINIO_SECRET_KEY: CHANGEME123
-      # CHROMA_URL: http://chroma:8000
     stdin_open: true
     tty: true
 

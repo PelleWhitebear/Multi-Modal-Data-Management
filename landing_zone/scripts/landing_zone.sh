@@ -11,7 +11,7 @@ echo "Ingesting game data from Steam and SteamSpy..."
 ingest_games_t0=$(date +%s)
 python3 landing_zone/scripts/ingest_games.py \
     --steam-outfile steam_games.json \
-    --steamspy-outfile steam_games_spy.json \
+    --steamspy-outfile steamspy_games.json \
     --sleep 3 --retries 5 --autosave 10 --timeout 30
 ingest_games_t1=$(date +%s)
 echo "Game data ingestion completed."

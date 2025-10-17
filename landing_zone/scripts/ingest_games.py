@@ -323,7 +323,7 @@ def Scraper(s3_client, steam_dataset, steamspy_dataset, args, appIDs = VALID_IDS
         logging.warning(f'AppID {appID} discarted.')
 
       time.sleep(args.sleep if random.random() > 0.1 else args.sleep * 2.0)
-    count += 1
+      count += 1
 
     logging.info(f'Scrape completed: {gamesAdded} new games added, {gamesDiscarted} discarted')
     UploadJSON(s3_client, steam_dataset, args.steam_outfile)
