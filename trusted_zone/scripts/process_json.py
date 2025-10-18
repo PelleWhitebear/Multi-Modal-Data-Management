@@ -6,11 +6,9 @@ import logging
 from botocore.exceptions import ClientError
 
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../global_scripts'))
-if parent_dir not in sys.path:
-    sys.path.append(parent_dir)
-
-from consts import *
+sys.path.append(parent_dir)
 from utils import *
+from consts import *
 
 setup_logging("process_json.log")
 
@@ -48,12 +46,12 @@ def validate_json_structure(json_data, required_keys):
         logging.debug(f"JSON data is neither dict nor list: {type(json_data)}")
         return False
 
-def process_json(s3_client, formatted_zone_prefix, trusted_zone_prefix, required_keys):
+def process_json(s3_client, formatted_zone_path, trusted_zone_path, required_keys):
     try:
         # List objects in the formatted zone
-        objects = s3_client.list_objects_v2(Bucket=FORMATTED_ZONE_BUCKET, Prefix=formatted_zone_prefix)
+        objects = s3_client.list_objects_v2(Bucket=FORMATTED_ZONE_BUCKET, Prefix=formatted_zone_path)
         if 'Contents' not in objects:
-            logging.info(f"No files found in {formatted_zone_prefix}.")
+            logging.info(f"No files found in {formatted_zone_path}.")
             return
 
         for obj in objects['Contents']:
@@ -64,9 +62,6 @@ def process_json(s3_client, formatted_zone_prefix, trusted_zone_prefix, required
                 # Get the object content
                 response = s3_client.get_object(Bucket=FORMATTED_ZONE_BUCKET, Key=key)
                 file_content = response['Body'].read().decode('utf-8')
-
-                # Log raw file content for debugging
-                logging.debug(f"Raw content of {key}: {file_content}")
 
                 try:
                     data = json.loads(file_content)
@@ -82,12 +77,12 @@ def process_json(s3_client, formatted_zone_prefix, trusted_zone_prefix, required
                     logging.warning(f"Skipping invalid JSON file: {key}")
                     continue
 
-                # Standardize formatting
+                # Standardize the JSON formatting
                 standardized_data = json.dumps(data, indent=4, sort_keys=True)
 
                 # Define the new key for the trusted zone
                 base_name = key.split('/')[-1]
-                new_key = f"{trusted_zone_prefix}/{base_name}"
+                new_key = f"{trusted_zone_path}/{base_name}"
 
                 # Upload the standardized JSON to the trusted zone
                 s3_client.put_object(
@@ -103,7 +98,7 @@ def process_json(s3_client, formatted_zone_prefix, trusted_zone_prefix, required
                 logging.error(f"Unexpected error processing file {key}: {e}")
 
     except ClientError as e:
-        logging.critical(f"Boto3 error listing objects in {formatted_zone_prefix}: {e}", exc_info=True)
+        logging.critical(f"Boto3 error listing objects in {formatted_zone_path}: {e}", exc_info=True)
     except Exception as e:
         logging.critical(f"Unexpected error in process_json: {e}", exc_info=True)
 
@@ -122,16 +117,16 @@ def main():
         # Process Steam API JSON files
         process_json(
             s3_client,
-            formatted_zone_prefix="json/steam",
-            trusted_zone_prefix="json/steam",
+            formatted_zone_path="json/steam",
+            trusted_zone_path="json/steam",
             required_keys=STEAM_REQUIRED_KEYS
         )
 
         # Process SteamSpy API JSON files
         process_json(
             s3_client,
-            formatted_zone_prefix="json/steamspy",
-            trusted_zone_prefix="json/steamspy",
+            formatted_zone_path="json/steamspy",
+            trusted_zone_path="json/steamspy",
             required_keys=STEAMSPY_REQUIRED_KEYS
         )
 
