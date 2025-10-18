@@ -26,7 +26,6 @@ services:
     depends_on:
       - minio
       # - chroma
-    
     stdin_open: true
     tty: true
 
