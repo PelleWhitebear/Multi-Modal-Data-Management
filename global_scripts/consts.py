@@ -1,5 +1,5 @@
 # MinIO connection:
-ENDPOINT_URL = "http://minio:9000"
+ENDPOINT_URL = "http://localhost:9000"
 AWS_ACCESS_KEY_ID = "ROOTNAME"
 AWS_SECRET_ACCESS_KEY = "CHANGEME123"
 
@@ -12,6 +12,9 @@ PERSISTENT_SUB_BUCKET = "persistent_landing"
 FORMATTED_ZONE_BUCKET = "formatted-zone"
 JSON_SUB_BUCKET = "json"
 MEDIA_SUB_BUCKET = "media"
+
+# Buckets and sub-buckets (trusted-zone):
+TRUSTED_ZONE_BUCKET = "trusted-zone"
 
 # Target formats
 TARGET_IMG_FORMAT = 'jpg'
