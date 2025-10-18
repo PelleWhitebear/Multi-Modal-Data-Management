@@ -1,6 +1,5 @@
 import sys
 import os
-import io
 import boto3
 import logging
 import tempfile
@@ -61,7 +60,7 @@ def format_video(s3_client, video_name):
             video_clip.write_videofile(output_video_file.name, codec='libx264', logger='bar')
         logging.info(f"Successfully converted '{video_name}'.")
 
-        # 3. Upload the converted video to the formatted zone
+        # upload the converted video to the formatted zone
         base_name = video_name.split('/')[-1].split('.')[0]
         new_key = f'{MEDIA_SUB_BUCKET}/video/{base_name}.{TARGET_VIDEO_FORMAT}'
         
@@ -126,6 +125,8 @@ def main():
         if success:
             # retrieve videos from landing zone
             objects = s3_client.list_objects_v2(Bucket=LANDING_ZONE_BUCKET, Prefix=f'{PERSISTENT_SUB_BUCKET}/media/video/')
+            if not 'Contents' in objects or not objects['Contents']:
+                logging.error('There are no videos in the persistent zone.')
 
             logging.info("Starting video format transformation...")
             for vid in objects['Contents']:

@@ -16,7 +16,7 @@ MEDIA_SUB_BUCKET = "media"
 # Target formats
 TARGET_IMG_FORMAT = 'jpg'
 TARGET_VIDEO_FORMAT = 'mp4'
-
+TARGET_TAB_FORMAT = 'json'
 
 # IDs for best 100 games
 VALID_IDS = [ "1687950", "632470", "271590", "7670", "220", "70", "659", "620", "2310", "1245620", 

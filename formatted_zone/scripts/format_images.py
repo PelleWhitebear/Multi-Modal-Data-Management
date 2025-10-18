@@ -112,6 +112,8 @@ def main():
         if success:
             # retrieve images from landing zone
             objects = s3_client.list_objects_v2(Bucket=LANDING_ZONE_BUCKET, Prefix=f'{PERSISTENT_SUB_BUCKET}/media/image/')
+            if not 'Contents' in objects or not objects['Contents']:
+                logging.error('There are no images in the persistent zone.')
 
             logging.info("Starting image format transformation...")
             for img in objects['Contents']:
