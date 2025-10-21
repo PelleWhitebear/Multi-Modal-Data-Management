@@ -16,6 +16,9 @@ MEDIA_SUB_BUCKET = "media"
 # Buckets and sub-buckets (trusted-zone):
 TRUSTED_ZONE_BUCKET = "trusted-zone"
 
+# Buckets and sub-buckets (exploitation-zone):
+EXPLOITATION_ZONE_BUCKET = "exploitation-zone"
+
 # Target formats
 TARGET_IMG_FORMAT = 'jpg'
 TARGET_VIDEO_FORMAT = 'mp4'
@@ -93,3 +96,8 @@ DEFAULT_TIMEOUT  = 10
 DEFAULT_CURRENCY = 'us'
 DEFAULT_LANGUAGE = 'en'
 MAX_THREADS = 10
+
+GEMINI_MODEL = "gemma-3-12b-it"
+TIME_SLEEP_GEMINI = 10
+
+NUM_FRAMES = 5

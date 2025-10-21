@@ -3,7 +3,6 @@ import logging
 from datetime import datetime
 from botocore.exceptions import ClientError, BotoCoreError
 from urllib3.exceptions import HTTPError
-from consts import *
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [%(levelname)s] - %(message)s')
 
@@ -134,8 +133,8 @@ def ingest_data(s3_client, bucket, fileobj, key):
         return False
         
     # Try uploading the file object
-    
-    for attempt in range(1, DEFAULT_RETRIES + 1):
+
+    for attempt in range(1, int(os.getenv('DEFAULT_RETRIES')) + 1):
         try:
             fileobj.seek(0)
             s3_client.upload_fileobj(fileobj, bucket, key)
@@ -144,8 +143,8 @@ def ingest_data(s3_client, bucket, fileobj, key):
             
         except HTTPError as e:
             logging.error(f"HTTP error uploading {key} to {bucket}: {e}")
-            if attempt == DEFAULT_RETRIES:
-                logging.error(f"All {DEFAULT_RETRIES} attempts failed for {key}. Skipping.")
+            if attempt == int(os.getenv('DEFAULT_RETRIES')):
+                logging.error(f"All {os.getenv('DEFAULT_RETRIES')} attempts failed for {key}. Skipping.")
                 return False
         except (ClientError, BotoCoreError) as e:
             code = e.response["Error"]["Code"]
@@ -216,7 +215,7 @@ def setup_logging(log_filename: str, level=logging.INFO, filemode='w'):
     logging.basicConfig(
         level=level,
         format='%(asctime)s - [%(levelname)s] - %(message)s',
-        filename=log_file,
-        filemode=filemode,
+        # filename=log_file,
+        # filemode=filemode,
         force=True  # override any existing config
     )
