@@ -1,15 +1,16 @@
-import sys
 import os
 import boto3
 import logging
 from datetime import datetime
+import dotenv
 
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../global_scripts'))
-sys.path.append(parent_dir)
-from utils import *
-from consts import *
+dotenv.load_dotenv(dotenv.find_dotenv())
 
-setup_logging("move_to_persistent.log")
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - [%(levelname)s] - %(message)s',
+    force=True  # override any existing config
+)
 
 def main():
 
@@ -17,14 +18,14 @@ def main():
     try:
         s3_client = boto3.client(
             "s3",
-            endpoint_url=ENDPOINT_URL,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            endpoint_url=os.getenv("ENDPOINT_URL"),
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
         )
         logging.info("Connected to MinIO.")
 
         try:
-            objects = s3_client.list_objects_v2(Bucket=LANDING_ZONE_BUCKET, Prefix=f"{TEMPORAL_SUB_BUCKET}/")
+            objects = s3_client.list_objects_v2(Bucket=os.getenv("LANDING_ZONE_BUCKET"), Prefix=f"{os.getenv('TEMPORAL_SUB_BUCKET')}/")
             if "Contents" in objects:
                 moving_objects = [obj for obj in objects["Contents"] if not obj['Key'].endswith(("/", ".bak"))]
                 delete_objects = [obj for obj in objects["Contents"] if not obj['Key'].endswith("/")]
@@ -34,29 +35,29 @@ def main():
                         ext = "json"
                         source = obj['Key'].split("/")[-1].split("_")[0]
                         sub_bucket = f"{source}"
-                        convention_name = f"{PERSISTENT_SUB_BUCKET}/{ext}/{sub_bucket}/"
+                        convention_name = f"{os.getenv('PERSISTENT_SUB_BUCKET')}/{ext}/{sub_bucket}/"
                         convention_name += f"{source}#{datetime.now().strftime('%Y%m%d_%H%M%S')}#games.json"
                     elif obj['Key'].endswith(".jpg"):
                         game_id = obj['Key'].split("/")[-1].split("_")[0]
                         media_num = obj['Key'].split("/")[-1].split("_")[1].split(".")[0]
-                        convention_name = f"{PERSISTENT_SUB_BUCKET}/media/image/"
+                        convention_name = f"{os.getenv('PERSISTENT_SUB_BUCKET')}/media/image/"
                         convention_name += f"{datetime.now().strftime('%Y%m%d_%H%M%S')}#{game_id}#{media_num}.jpg"
                     elif obj['Key'].endswith(".mp4"):
                         game_id = obj['Key'].split("/")[-1].split("_")[0]
                         media_num = obj['Key'].split("/")[-1].split("_")[1].split(".")[0]
-                        convention_name = f"{PERSISTENT_SUB_BUCKET}/media/video/"
+                        convention_name = f"{os.getenv('PERSISTENT_SUB_BUCKET')}/media/video/"
                         convention_name += f"{datetime.now().strftime('%Y%m%d_%H%M%S')}#{game_id}#{media_num}.mp4"
                     s3_client.copy_object(
-                        Bucket=LANDING_ZONE_BUCKET,
+                        Bucket=os.getenv("LANDING_ZONE_BUCKET"),
                         CopySource={
-                            "Bucket": LANDING_ZONE_BUCKET,
+                            "Bucket": os.getenv("LANDING_ZONE_BUCKET"),
                             "Key": obj["Key"]
                         },
                         Key=convention_name
                     )
                     logging.info(f"Copied object {obj['Key']} to persistent storage.")
                 s3_client.delete_objects(
-                    Bucket=LANDING_ZONE_BUCKET,
+                    Bucket=os.getenv("LANDING_ZONE_BUCKET"),
                     Delete={
                         'Objects': [{'Key': obj['Key']} for obj in delete_objects],
                         'Quiet': True

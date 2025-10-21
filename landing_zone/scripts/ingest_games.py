@@ -32,13 +32,17 @@ from tqdm import tqdm
 import boto3
 import json
 import io
+from global_scripts.utils import ingest_data
 
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../global_scripts'))
-sys.path.append(parent_dir)
-from utils import *
-from consts import *
+import dotenv
 
-setup_logging("ingest_games.log")
+dotenv.load_dotenv(dotenv.find_dotenv())
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - [%(levelname)s] - %(message)s',
+    force=True  # override any existing config
+)
 
 
 # IDs for best 100 games
@@ -86,7 +90,7 @@ def DoRequest(url, parameters=None, retryTime=5, successCount=0, errorCount=0, r
   '''
   response = None
   try:
-    response = requests.get(url=url, params=parameters, timeout=DEFAULT_TIMEOUT)
+    response = requests.get(url=url, params=parameters, timeout=float(os.getenv("DEFAULT_TIMEOUT")))
   except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError,
           requests.exceptions.Timeout, requests.exceptions.RequestException,
           SSLError) as ex:
@@ -118,7 +122,7 @@ def DoRequest(url, parameters=None, retryTime=5, successCount=0, errorCount=0, r
 
   return response
 
-def SteamRequest(appID, retryTime, successRequestCount, errorRequestCount, retries, currency=DEFAULT_CURRENCY, language=DEFAULT_LANGUAGE):
+def SteamRequest(appID, retryTime, successRequestCount, errorRequestCount, retries, currency=os.getenv("DEFAULT_CURRENCY"), language=os.getenv("DEFAULT_LANGUAGE")):
   '''
   Request and parse information about a Steam app.
   '''
@@ -267,10 +271,10 @@ def UploadJSON(s3_client, data, filename, backup = False):
   try:
     name, ext = os.path.splitext(filename)
     target_name = f'{name}.bak' if backup else filename
-    target_name = TEMPORAL_SUB_BUCKET + '/' + target_name
+    target_name = os.getenv("TEMPORAL_SUB_BUCKET") + '/' + target_name
     fileobj = io.BytesIO(json.dumps(data, indent=4, ensure_ascii=False).encode("utf-8"))
     fileobj.name = target_name  # In case of errors, for logging purposes
-    ingest_data(s3_client, LANDING_ZONE_BUCKET, fileobj, target_name)
+    ingest_data(s3_client, os.getenv("LANDING_ZONE_BUCKET"), fileobj, target_name)
 
   except Exception as ex:
     logging.exception(f'Error uploading {filename}.')
@@ -356,9 +360,9 @@ def main():
   try:
     s3_client = boto3.client(
         "s3",
-        endpoint_url=ENDPOINT_URL,
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        endpoint_url=os.getenv("ENDPOINT_URL"),
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
     )
     logging.info("Connected to MinIO.")
 
@@ -385,12 +389,12 @@ def main():
 if __name__ == "__main__":
   logging.info(f'Starting Steam games scraper.')
   parser = argparse.ArgumentParser(description='Steam games scraper.')
-  parser.add_argument('-so', '--steam-outfile',  type=str,   default=DEFAULT_STEAM_OUTFILE,  help='Steam data output file name')
-  parser.add_argument('-sso', '--steamspy-outfile',  type=str,   default=DEFAULT_STEAMSPY_OUTFILE,  help='SteamSpy data output file name')
-  parser.add_argument('-s', '--sleep',    type=float, default=DEFAULT_SLEEP,    help='Waiting time between requests')
-  parser.add_argument('-r', '--retries',  type=int,   default=DEFAULT_RETRIES,  help='Number of retries (0 to always retry)')
-  parser.add_argument('-a', '--autosave', type=int,   default=DEFAULT_AUTOSAVE, help='Record the data every number of new entries (0 to deactivate)')
-  parser.add_argument('-t', '--timeout',  type=float, default=DEFAULT_TIMEOUT,  help='Timeout for each request')
+  parser.add_argument('-so', '--steam-outfile',  type=str,   default=os.getenv("DEFAULT_STEAM_OUTFILE"),  help='Steam data output file name')
+  parser.add_argument('-sso', '--steamspy-outfile',  type=str,   default=os.getenv("DEFAULT_STEAMSPY_OUTFILE"),  help='SteamSpy data output file name')
+  parser.add_argument('-s', '--sleep',    type=float, default=float(os.getenv("DEFAULT_SLEEP")),    help='Waiting time between requests')
+  parser.add_argument('-r', '--retries',  type=int,   default=int(os.getenv("DEFAULT_RETRIES")),  help='Number of retries (0 to always retry)')
+  parser.add_argument('-a', '--autosave', type=int,   default=int(os.getenv("DEFAULT_AUTOSAVE")), help='Record the data every number of new entries (0 to deactivate)')
+  parser.add_argument('-t', '--timeout',  type=float, default=float(os.getenv("DEFAULT_TIMEOUT")),  help='Timeout for each request')
   args = parser.parse_args()
   random.seed(time.time())
 
