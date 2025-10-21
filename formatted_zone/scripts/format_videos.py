@@ -5,28 +5,31 @@ import logging
 import tempfile
 from moviepy.editor import VideoFileClip
 from botocore.exceptions import ClientError
+import dotenv
+import os
 
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../global_scripts'))
-sys.path.append(parent_dir)
-from utils import *
-from consts import *
+dotenv.load_dotenv(dotenv.find_dotenv())
 
-setup_logging("format_videos.log")
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - [%(levelname)s] - %(message)s',
+    force=True  # override any existing config
+)
 
 
 def delete_videos_from_formatted(s3_client):
-    logging.info(f"Preparing to delete all objects in sub-bucket {FORMATTED_ZONE_BUCKET}/{MEDIA_SUB_BUCKET}/video")
-    prefix_videos = f"{MEDIA_SUB_BUCKET}/video/"
+    logging.info(f"Preparing to delete all objects in sub-bucket {os.getenv('FORMATTED_ZONE_BUCKET')}/{os.getenv('MEDIA_SUB_BUCKET')}/video")
+    prefix_videos = f"{os.getenv('MEDIA_SUB_BUCKET')}/video/"
     try:
         # list objects to delete
-        objects_to_delete = s3_client.list_objects_v2(Bucket=FORMATTED_ZONE_BUCKET, Prefix=prefix_videos)
+        objects_to_delete = s3_client.list_objects_v2(Bucket=os.getenv('FORMATTED_ZONE_BUCKET'), Prefix=prefix_videos)
         if 'Contents' not in objects_to_delete:
             logging.warning(f"No objects found with prefix '{prefix_videos}'. Nothing to delete.")
             return True
         delete_keys = {'Objects': [{'Key': obj['Key']} for obj in objects_to_delete['Contents']]}
 
         # delete them
-        response = s3_client.delete_objects(Bucket=FORMATTED_ZONE_BUCKET, Delete=delete_keys)
+        response = s3_client.delete_objects(Bucket=os.getenv('FORMATTED_ZONE_BUCKET'), Delete=delete_keys)
 
         if 'Errors' in response:
             logging.error("An error occurred during bulk delete.")
@@ -46,26 +49,26 @@ def delete_videos_from_formatted(s3_client):
 
 def format_video(s3_client, video_name):
     input_video_file = tempfile.NamedTemporaryFile(delete=False, suffix=".tmp")
-    output_video_file = tempfile.NamedTemporaryFile(delete=False, suffix=f".{TARGET_VIDEO_FORMAT}")
+    output_video_file = tempfile.NamedTemporaryFile(delete=False, suffix=f".{os.getenv('TARGET_VIDEO_FORMAT')}")
 
     try:
         # download the original video from MinIO to the input temp file
         logging.info(f"Downloading '{video_name}' for formatting...")
-        s3_client.download_file(LANDING_ZONE_BUCKET, video_name, input_video_file.name)
+        s3_client.download_file(os.getenv('LANDING_ZONE_BUCKET'), video_name, input_video_file.name)
         logging.info(f"Successfully downloaded '{video_name}'.")
 
         # convert the video using moviepy
-        logging.info(f"Converting '{video_name}' to {TARGET_VIDEO_FORMAT}...")
+        logging.info(f"Converting '{video_name}' to {os.getenv('TARGET_VIDEO_FORMAT')}...")
         with VideoFileClip(input_video_file.name) as video_clip:
             video_clip.write_videofile(output_video_file.name, codec='libx264', logger='bar')
         logging.info(f"Successfully converted '{video_name}'.")
 
         # upload the converted video to the formatted zone
         base_name = video_name.split('/')[-1].split('.')[0]
-        new_key = f'{MEDIA_SUB_BUCKET}/video/{base_name}.{TARGET_VIDEO_FORMAT}'
+        new_key = f'{os.getenv("MEDIA_SUB_BUCKET")}/video/{base_name}.{os.getenv("TARGET_VIDEO_FORMAT")}'
         
         logging.info(f"Uploading formatted video to '{new_key}'...")
-        s3_client.upload_file(output_video_file.name, FORMATTED_ZONE_BUCKET, new_key)
+        s3_client.upload_file(output_video_file.name, os.getenv("FORMATTED_ZONE_BUCKET"), new_key)
         logging.info(f"Successfully uploaded '{new_key}'.")
         return True
 
@@ -87,12 +90,12 @@ def format_video(s3_client, video_name):
 def move_to_formatted_zone(s3_client, video_name):
     try:
         base_name = video_name.split('/')[-1]
-        new_key = f'{MEDIA_SUB_BUCKET}/video/{base_name}'
+        new_key = f'{os.getenv("MEDIA_SUB_BUCKET")}/video/{base_name}'
 
         s3_client.copy_object(
-            Bucket=FORMATTED_ZONE_BUCKET,
+            Bucket=os.getenv("FORMATTED_ZONE_BUCKET"),
             CopySource={
-                "Bucket": LANDING_ZONE_BUCKET,
+                "Bucket": os.getenv("LANDING_ZONE_BUCKET"),
                 "Key": video_name
             },
             Key=new_key
@@ -114,9 +117,9 @@ def main():
     try:
         s3_client = boto3.client(
             "s3",
-            endpoint_url=ENDPOINT_URL,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            endpoint_url=os.getenv("ENDPOINT_URL"),
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
         )
         logging.info("Connected to MinIO.")
         
@@ -124,7 +127,7 @@ def main():
         success = delete_videos_from_formatted(s3_client)
         if success:
             # retrieve videos from landing zone
-            objects = s3_client.list_objects_v2(Bucket=LANDING_ZONE_BUCKET, Prefix=f'{PERSISTENT_SUB_BUCKET}/media/video/')
+            objects = s3_client.list_objects_v2(Bucket=os.getenv("LANDING_ZONE_BUCKET"), Prefix=f'{os.getenv("PERSISTENT_SUB_BUCKET")}/media/video/')
             if not 'Contents' in objects or not objects['Contents']:
                 logging.error('There are no videos in the persistent zone.')
 
@@ -133,7 +136,7 @@ def main():
                 vid_name = vid['Key']
                 format_vid = vid_name.split('.')[-1].lower()
                 # if the video format is different from MP4, is formatted and moved to formatted zone
-                if format_vid != TARGET_VIDEO_FORMAT:
+                if format_vid != os.getenv("TARGET_VIDEO_FORMAT"):
                     format_video(s3_client, vid_name)
                 # otherwise, it is moved directly to the formatted zone
                 else:
