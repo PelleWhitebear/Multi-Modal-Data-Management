@@ -13,6 +13,8 @@ FORMATTED_ZONE_BUCKET = "formatted-zone"
 JSON_SUB_BUCKET = "json"
 MEDIA_SUB_BUCKET = "media"
 
+# Buckets and sub-buckets (exploitation-zone):
+EXPLOITATION_ZONE_BUCKET = "exploitation-zone"
 # Buckets and sub-buckets (trusted-zone):
 TRUSTED_ZONE_BUCKET = "trusted-zone"
 
@@ -93,3 +95,8 @@ DEFAULT_TIMEOUT  = 10
 DEFAULT_CURRENCY = 'us'
 DEFAULT_LANGUAGE = 'en'
 MAX_THREADS = 10
+
+GEMINI_MODEL = "gemma-3-12b-it"
+TIME_SLEEP_GEMINI = 10
+
+NUM_FRAMES = 5

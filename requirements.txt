@@ -8,4 +8,11 @@ jupyterlab
 moviepy==1.0.3
 xmltodict
 pyyaml
-opencv-python
+google-genai
+protobuf
+sentencepiece
+chromadb
+sentence-transformers
+open-clip-torch
+opencv-python-headless
+dotenv
