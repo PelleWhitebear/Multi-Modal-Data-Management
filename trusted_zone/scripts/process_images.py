@@ -1,22 +1,24 @@
-import sys
-import os
 import logging
 import boto3
 from botocore.exceptions import ClientError
 from io import BytesIO
 from PIL import Image, ImageEnhance
+import dotenv
+import os
+from global_scripts.utils import create_bucket, create_sub_bucket
 
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../global_scripts'))
-sys.path.append(parent_dir)
-from utils import *
-from consts import *
+dotenv.load_dotenv(dotenv.find_dotenv())
 
-setup_logging("process_images.log")
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - [%(levelname)s] - %(message)s',
+    force=True  # override any existing config
+)
 
 def process_images(s3_client, formatted_zone_prefix, trusted_zone_prefix):
     try:
         # List objects in the formatted zone
-        objects = s3_client.list_objects_v2(Bucket=FORMATTED_ZONE_BUCKET, Prefix=formatted_zone_prefix)
+        objects = s3_client.list_objects_v2(Bucket=os.getenv("FORMATTED_ZONE_BUCKET"), Prefix=formatted_zone_prefix)
         if 'Contents' not in objects:
             logging.info(f"No images found in {formatted_zone_prefix}.")
             return
@@ -28,7 +30,7 @@ def process_images(s3_client, formatted_zone_prefix, trusted_zone_prefix):
             logging.info(f"Processing image: {key}")
             try:
                 # Get the image from MinIO
-                response = s3_client.get_object(Bucket=FORMATTED_ZONE_BUCKET, Key=key)
+                response = s3_client.get_object(Bucket=os.getenv("FORMATTED_ZONE_BUCKET"), Key=key)
                 file_content = response['Body'].read()
                 img = Image.open(BytesIO(file_content))
                 img = img.convert('RGB')
@@ -44,7 +46,7 @@ def process_images(s3_client, formatted_zone_prefix, trusted_zone_prefix):
                 new_key = f"{trusted_zone_prefix}/{base_name}"
                 # Upload to trusted zone
                 s3_client.put_object(
-                    Bucket=TRUSTED_ZONE_BUCKET,
+                    Bucket=os.getenv("TRUSTED_ZONE_BUCKET"),
                     Key=new_key,
                     Body=buffer.getvalue(),
                     ContentType='image/jpeg'
@@ -63,9 +65,9 @@ def main():
     try:
         s3_client = boto3.client(
             "s3",
-            endpoint_url=ENDPOINT_URL,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            endpoint_url=os.getenv("ENDPOINT_URL"),
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
         )
         logging.info("Connected to MinIO.")
         process_images(

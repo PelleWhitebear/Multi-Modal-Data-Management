@@ -36,53 +36,6 @@ VALID_IDS = [ "1687950", "632470", "271590", "7670", "220", "70", "659", "620", 
 "50100", "22000", "1504500", "590380", "15210", "12210", "201270", "1284210", "10500", "1123450", 
 "385760", "354400", "26800", "52003", "34330", "558990", "353540", "239350", "1163060", "8930"]
 
-# Updated required keys for JSON validation
-STEAM_REQUIRED_KEYS = [
-        # "id",
-        "name",
-        "release_date",
-        "required_age",
-        "price",
-        "dlc_count",
-        "detailed_description", 
-        "about_the_game",
-        "header_image",
-        "support_url",
-        "support_email",
-        "windows",
-        "mac",
-        "linux",
-        "metacritic_score",
-        "metacritic_url",
-        "achievements",
-        "recommendations",
-        "notes",
-        "supported_languages",
-        "full_audio_languages",
-        "packages",
-        "developers",
-        "publishers",
-        "categories",
-        "genres",
-        "screenshots",
-        "movies"
-]
-
-STEAMSPY_REQUIRED_KEYS = [
-        "user_score",
-        "score_rank",
-        "positive",
-        "negative",
-        "estimated_owners",
-        "average_playtime_forever",
-        "average_playtime_2weeks",
-        "median_playtime_forever",
-        "median_playtime_2weeks",
-        "discount",
-        "peak_ccu",
-        "tags"
-]
-
 # Ingestion parameters:
 DEFAULT_SLEEP = 3
 DEFAULT_TIMEOUT = 30
