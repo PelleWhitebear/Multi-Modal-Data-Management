@@ -16,6 +16,7 @@ docker compose run --rm pipeline /app/landing_zone/scripts/landing_zone.sh
 ```bash
 # When need to run a specific .py file:
 docker compose run --rm pipeline python -m exploitation_zone.scripts.query # Notice it doesn't have the .py
+```
 
 ```bash
 # To turn everything off:
