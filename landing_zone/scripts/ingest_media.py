@@ -1,6 +1,5 @@
 import boto3
 import logging
-import argparse
 import sys
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -29,10 +28,10 @@ def upload_file(s3_client, url, key):
     :param url: The URL of the media file to upload
     :return: True if upload succeeded, else False
     """
-    timeout = args.timeout
-    sleep = args.sleep
-    for attempt in range(1, args.retries + 1):
-        
+    timeout = float(os.getenv("DEFAULT_TIMEOUT"))
+    sleep = float(os.getenv("DEFAULT_SLEEP"))
+    for attempt in range(1, int(os.getenv("DEFAULT_RETRIES")) + 1):
+
         try:
             response = requests.get(url, timeout=timeout)
             response.raise_for_status()
@@ -49,8 +48,8 @@ def upload_file(s3_client, url, key):
             logging.warning(f"Attempt {attempt} failed: {e}")
             timeout *= 2
             sleep *= 2
-            if attempt == args.retries:
-                logging.error(f"All {args.retries} attempts failed for {url}. Skipping.")
+            if attempt == int(os.getenv("DEFAULT_RETRIES")):
+                logging.error(f"All {int(os.getenv('DEFAULT_RETRIES'))} attempts failed for {url}. Skipping.")
                 return False
             time.sleep(sleep)
         
@@ -168,15 +167,4 @@ def main():
     
 
 if __name__ == "__main__":
-    logging.info(f'Starting Steam games scraper.')
-    parser = argparse.ArgumentParser(description='Steam games scraper.')
-    parser.add_argument('-s', '--sleep',    type=float, default=float(os.getenv("DEFAULT_SLEEP")),    help='Waiting time between requests')
-    parser.add_argument('-t', '--timeout',  type=float, default=float(os.getenv("DEFAULT_TIMEOUT")),  help='Timeout for each request')
-    parser.add_argument('-r', '--retries',  type=int,   default=int(os.getenv("DEFAULT_RETRIES")),  help='Number of retries (0 to always retry)')
-    args = parser.parse_args()
-
-    if 'h' in args or 'help' in args:
-        parser.print_help()
-        sys.exit()
-
     main()

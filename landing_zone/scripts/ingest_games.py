@@ -25,7 +25,6 @@ import re
 from ssl import SSLError
 import requests
 import time
-import argparse
 import random
 import logging
 from tqdm import tqdm
@@ -281,7 +280,7 @@ def UploadJSON(s3_client, data, filename, backup = False):
     sys.exit()
 
 
-def Scraper(s3_client, steam_dataset, steamspy_dataset, args, appIDs = VALID_IDS):
+def Scraper(s3_client, steam_dataset, steamspy_dataset, appIDs = VALID_IDS):
   '''
   Search games in Steam.
   '''
@@ -298,11 +297,11 @@ def Scraper(s3_client, steam_dataset, steamspy_dataset, args, appIDs = VALID_IDS
     count = 0
 
     for appID in tqdm(apps):
-      app = SteamRequest(appID, min(4, args.sleep), successRequestCount, errorRequestCount, args.retries)
+      app = SteamRequest(appID, min(4, float(os.getenv("DEFAULT_SLEEP"))), successRequestCount, errorRequestCount, int(os.getenv("DEFAULT_RETRIES")))
       if app:
         steam_game = ParseSteamGame(app)
         steamspy_game = {}
-        extra = SteamSpyRequest(appID, min(4, args.sleep), successRequestCount, errorRequestCount, args.retries)
+        extra = SteamSpyRequest(appID, min(4, float(os.getenv("DEFAULT_SLEEP"))), successRequestCount, errorRequestCount, int(os.getenv("DEFAULT_RETRIES")))
         if extra != None:
           steamspy_game['user_score'] = extra['userscore']
           steamspy_game['score_rank'] = extra['score_rank']
@@ -335,20 +334,20 @@ def Scraper(s3_client, steam_dataset, steamspy_dataset, args, appIDs = VALID_IDS
         logging.info(f'AppID {appID} added: {steam_game["name"]}')
         gamesAdded += 1
 
-        if args.autosave > 0 and gamesAdded > 0 and gamesAdded % args.autosave == 0:
-          UploadJSON(s3_client, steam_dataset, args.steam_outfile, True)
-          UploadJSON(s3_client, steamspy_dataset, args.steamspy_outfile, True)
+        if int(os.getenv("DEFAULT_AUTOSAVE")) > 0 and gamesAdded > 0 and gamesAdded % int(os.getenv("DEFAULT_AUTOSAVE")) == 0:
+          UploadJSON(s3_client, steam_dataset, os.getenv("DEFAULT_STEAM_OUTFILE"), True)
+          UploadJSON(s3_client, steamspy_dataset, os.getenv("DEFAULT_STEAMSPY_OUTFILE"), True)
 
       else:
         gamesDiscarted += 1
         logging.warning(f'AppID {appID} discarted.')
 
-      time.sleep(args.sleep if random.random() > 0.1 else args.sleep * 2.0)
+      time.sleep(float(os.getenv("DEFAULT_SLEEP")) if random.random() > 0.1 else float(os.getenv("DEFAULT_SLEEP")) * 2.0)
       count += 1
 
     logging.info(f'Scrape completed: {gamesAdded} new games added, {gamesDiscarted} discarted')
-    UploadJSON(s3_client, steam_dataset, args.steam_outfile)
-    UploadJSON(s3_client, steamspy_dataset, args.steamspy_outfile)
+    UploadJSON(s3_client, steam_dataset, os.getenv("DEFAULT_STEAM_OUTFILE"))
+    UploadJSON(s3_client, steamspy_dataset, os.getenv("DEFAULT_STEAMSPY_OUTFILE"))
   else:
     logging.error('Error requesting list of games')
     sys.exit()
@@ -371,11 +370,11 @@ def main():
     steamspy_dataset = {}
 
     try:
-      Scraper(s3_client, steam_dataset, steamspy_dataset, args, appIDs=VALID_IDS)
+      Scraper(s3_client, steam_dataset, steamspy_dataset, appIDs=VALID_IDS)
     
     except (KeyboardInterrupt, SystemExit):
-      UploadJSON(s3_client, steam_dataset, args.steam_outfile, args.autosave > 0)
-      UploadJSON(s3_client, steamspy_dataset, args.steamspy_outfile, args.autosave > 0)
+      UploadJSON(s3_client, steam_dataset, os.getenv("DEFAULT_STEAM_OUTFILE"), int(os.getenv("DEFAULT_AUTOSAVE")) > 0)
+      UploadJSON(s3_client, steamspy_dataset, os.getenv("DEFAULT_STEAMSPY_OUTFILE"), int(os.getenv("DEFAULT_AUTOSAVE")) > 0)
     except Exception:
       logging.exception(f"Error during data ingestion.")
       return
@@ -387,21 +386,6 @@ def main():
       return
 
 if __name__ == "__main__":
-  logging.info(f'Starting Steam games scraper.')
-  parser = argparse.ArgumentParser(description='Steam games scraper.')
-  parser.add_argument('-so', '--steam-outfile',  type=str,   default=os.getenv("DEFAULT_STEAM_OUTFILE"),  help='Steam data output file name')
-  parser.add_argument('-sso', '--steamspy-outfile',  type=str,   default=os.getenv("DEFAULT_STEAMSPY_OUTFILE"),  help='SteamSpy data output file name')
-  parser.add_argument('-s', '--sleep',    type=float, default=float(os.getenv("DEFAULT_SLEEP")),    help='Waiting time between requests')
-  parser.add_argument('-r', '--retries',  type=int,   default=int(os.getenv("DEFAULT_RETRIES")),  help='Number of retries (0 to always retry)')
-  parser.add_argument('-a', '--autosave', type=int,   default=int(os.getenv("DEFAULT_AUTOSAVE")), help='Record the data every number of new entries (0 to deactivate)')
-  parser.add_argument('-t', '--timeout',  type=float, default=float(os.getenv("DEFAULT_TIMEOUT")),  help='Timeout for each request')
-  args = parser.parse_args()
-  random.seed(time.time())
-
-  if 'h' in args or 'help' in args:
-    parser.print_help()
-    sys.exit()
-
   main()
 
   

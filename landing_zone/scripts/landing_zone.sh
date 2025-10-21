@@ -9,16 +9,13 @@ echo "Buckets and sub-buckets created."
 
 echo "Ingesting game data from Steam and SteamSpy..."
 ingest_games_t0=$(date +%s)
-python3 -m landing_zone.scripts.ingest_games \
-    --steam-outfile steam_games.json \
-    --steamspy-outfile steamspy_games.json \
-    --sleep 3 --retries 5 --autosave 10 --timeout 30
+python3 -m landing_zone.scripts.ingest_games
 ingest_games_t1=$(date +%s)
 echo "Game data ingestion completed."
 
 echo "Ingesting media files..."
 ingest_media_t0=$(date +%s)
-python3 -m landing_zone.scripts.ingest_media --sleep 4 --timeout 5 --retries 5
+python3 -m landing_zone.scripts.ingest_media
 ingest_media_t1=$(date +%s)
 echo "Media files ingestion completed."
 
