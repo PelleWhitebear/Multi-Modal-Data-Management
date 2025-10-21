@@ -12,23 +12,26 @@ services:
       MINIO_ROOT_PASSWORD: CHANGEME123
     command: server /data --console-address ":9001"
 
-  # chroma:
-  #   image: chromadb/chroma
-  #   container_name: chroma
-  #   ports:
-  #     - "8000:8000"
-  #   volumes:
-  #     - chroma_data:/chroma
+  chroma:
+    image: chromadb/chroma
+    container_name: chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma
 
   pipeline:
     build: .
     container_name: pipeline
     depends_on:
       - minio
-      # - chroma
+      - chroma
     stdin_open: true
     tty: true
 
 volumes:
   minio_data:
-  # chroma_data:
+  chroma_data:
