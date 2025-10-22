@@ -3,19 +3,19 @@ set -e
 
 echo "Starting Formatted Zone processing..."
 create_t0=$(date +%s)
-python3 trusted_zone/scripts/create.py
+python3 -m trusted_zone.create
 create_t1=$(date +%s)
 echo "Formatted Zone buckets created."
 
 echo "Formatting JSON files..."
 format_json_t0=$(date +%s)
-python3 trusted_zone/scripts/process_json.py
+python3 -m trusted_zone.process_json
 format_json_t1=$(date +%s)
 echo "JSON formatting completed."
 
 echo "Formatting image files..."
 format_images_t0=$(date +%s)
-python3 trusted_zone/scripts/process_images.py
+python3 -m trusted_zone.process_images
 format_images_t1=$(date +%s)
 echo "Image formatting completed."
 
