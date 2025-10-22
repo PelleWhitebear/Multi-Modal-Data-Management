@@ -17,8 +17,8 @@ logging.basicConfig(
 
 
 def delete_images_from_formatted(s3_client):
-    logging.info(f"Preparing to delete all objects in sub-bucket {os.getenv("FORMATTED_ZONE_BUCKET")}/{os.getenv("MEDIA_SUB_BUCKET")}/image")
-    prefix_images = f"{os.getenv("MEDIA_SUB_BUCKET")}/image/"
+    logging.info(f"Preparing to delete all objects in sub-bucket {os.getenv('FORMATTED_ZONE_BUCKET')}/{os.getenv('MEDIA_SUB_BUCKET')}/image")
+    prefix_images = f"{os.getenv('MEDIA_SUB_BUCKET')}/image/"
     try:
         # list objects to delete
         objects_to_delete = s3_client.list_objects_v2(Bucket=os.getenv("FORMATTED_ZONE_BUCKET"), Prefix=prefix_images)
@@ -64,7 +64,7 @@ def format_image(s3_client, img_name):
 
         # create new key for formatted image
         base_name = img_name.split('/')[-1].split('.')[0]
-        new_key = f'{os.getenv("MEDIA_SUB_BUCKET")}/image/{base_name}.{os.getenv("TARGET_IMG_FORMAT")}'
+        new_key = f"{os.getenv('MEDIA_SUB_BUCKET')}/image/{base_name}.{os.getenv('TARGET_IMG_FORMAT')}"
 
         s3_client.upload_fileobj(output_buffer, os.getenv("FORMATTED_ZONE_BUCKET"), new_key)
         logging.info(f"Successfully converted '{img_name}' to '{new_key}'")
@@ -76,7 +76,7 @@ def format_image(s3_client, img_name):
 def move_to_formatted_zone(s3_client, img_name):
     try:
         base_name = img_name.split('/')[-1]
-        new_key = f'{os.getenv("MEDIA_SUB_BUCKET")}/image/{base_name}'
+        new_key = f"{os.getenv('MEDIA_SUB_BUCKET')}/image/{base_name}"
 
         s3_client.copy_object(
             Bucket=os.getenv("FORMATTED_ZONE_BUCKET"),
@@ -113,7 +113,7 @@ def main():
         success = delete_images_from_formatted(s3_client)
         if success:
             # retrieve images from landing zone
-            objects = s3_client.list_objects_v2(Bucket=os.getenv("LANDING_ZONE_BUCKET"), Prefix=f'{os.getenv("PERSISTENT_SUB_BUCKET")}/media/image/')
+            objects = s3_client.list_objects_v2(Bucket=os.getenv("LANDING_ZONE_BUCKET"), Prefix=f"{os.getenv('PERSISTENT_SUB_BUCKET')}/media/image/")
             if not 'Contents' in objects or not objects['Contents']:
                 logging.error('There are no images in the persistent zone.')
 

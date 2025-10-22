@@ -65,7 +65,7 @@ def format_video(s3_client, video_name):
 
         # upload the converted video to the formatted zone
         base_name = video_name.split('/')[-1].split('.')[0]
-        new_key = f'{os.getenv("MEDIA_SUB_BUCKET")}/video/{base_name}.{os.getenv("TARGET_VIDEO_FORMAT")}'
+        new_key = f"{os.getenv('MEDIA_SUB_BUCKET')}/video/{base_name}.{os.getenv('TARGET_VIDEO_FORMAT')}"
         
         logging.info(f"Uploading formatted video to '{new_key}'...")
         s3_client.upload_file(output_video_file.name, os.getenv("FORMATTED_ZONE_BUCKET"), new_key)
@@ -90,7 +90,7 @@ def format_video(s3_client, video_name):
 def move_to_formatted_zone(s3_client, video_name):
     try:
         base_name = video_name.split('/')[-1]
-        new_key = f'{os.getenv("MEDIA_SUB_BUCKET")}/video/{base_name}'
+        new_key = f"{os.getenv('MEDIA_SUB_BUCKET')}/video/{base_name}"
 
         s3_client.copy_object(
             Bucket=os.getenv("FORMATTED_ZONE_BUCKET"),
@@ -127,7 +127,7 @@ def main():
         success = delete_videos_from_formatted(s3_client)
         if success:
             # retrieve videos from landing zone
-            objects = s3_client.list_objects_v2(Bucket=os.getenv("LANDING_ZONE_BUCKET"), Prefix=f'{os.getenv("PERSISTENT_SUB_BUCKET")}/media/video/')
+            objects = s3_client.list_objects_v2(Bucket=os.getenv("LANDING_ZONE_BUCKET"), Prefix=f"{os.getenv('PERSISTENT_SUB_BUCKET')}/media/video/")
             if not 'Contents' in objects or not objects['Contents']:
                 logging.error('There are no videos in the persistent zone.')
 
