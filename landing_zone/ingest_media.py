@@ -1,6 +1,5 @@
 import boto3
 import logging
-import argparse
 import sys
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -10,13 +9,16 @@ import json
 import urllib3
 from tqdm import tqdm
 import io
+import dotenv
+from global_scripts.utils import ingest_data
 
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../global_scripts'))
-sys.path.append(parent_dir)
-from utils import *
-from consts import *
+dotenv.load_dotenv(dotenv.find_dotenv())
 
-setup_logging("ingest_media.log")
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - [%(levelname)s] - %(message)s',
+    force=True  # override any existing config
+)
 
 def upload_file(s3_client, url, key):
     """
@@ -26,10 +28,10 @@ def upload_file(s3_client, url, key):
     :param url: The URL of the media file to upload
     :return: True if upload succeeded, else False
     """
-    timeout = args.timeout
-    sleep = args.sleep
-    for attempt in range(1, args.retries + 1):
-        
+    timeout = float(os.getenv("DEFAULT_TIMEOUT"))
+    sleep = float(os.getenv("DEFAULT_SLEEP"))
+    for attempt in range(1, int(os.getenv("DEFAULT_RETRIES")) + 1):
+
         try:
             response = requests.get(url, timeout=timeout)
             response.raise_for_status()
@@ -37,17 +39,17 @@ def upload_file(s3_client, url, key):
                 logging.warning(f"Skipping empty response from {url}")
                 return False
             # Exception handling is done inside ingest_data
-            key = f"{TEMPORAL_SUB_BUCKET}/{key}"
+            key = f"{os.getenv('TEMPORAL_SUB_BUCKET')}/{key}"
             fileobj = io.BytesIO(response.content)
-            return ingest_data(s3_client, LANDING_ZONE_BUCKET, fileobj, key)
+            return ingest_data(s3_client, os.getenv('LANDING_ZONE_BUCKET'), fileobj, key)
 
 
         except (requests.RequestException, urllib3.exceptions.ReadTimeoutError) as e:
             logging.warning(f"Attempt {attempt} failed: {e}")
             timeout *= 2
             sleep *= 2
-            if attempt == args.retries:
-                logging.error(f"All {args.retries} attempts failed for {url}. Skipping.")
+            if attempt == int(os.getenv("DEFAULT_RETRIES")):
+                logging.error(f"All {int(os.getenv('DEFAULT_RETRIES'))} attempts failed for {url}. Skipping.")
                 return False
             time.sleep(sleep)
         
@@ -65,7 +67,7 @@ def upload_concurrently(s3_client, media):
     """
     try:
         # Upload each file concurrently
-        with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+        with ThreadPoolExecutor(max_workers=int(os.getenv("MAX_THREADS"))) as executor:
             futures = []
             for game_id, game_info in media.items():
                 for image_idx, image_file in enumerate(game_info.get("images", []), start=1):
@@ -103,7 +105,7 @@ def get_media_urls(s3_client):
     media = {}
 
     try:
-        s3_response = s3_client.get_object(Bucket=LANDING_ZONE_BUCKET, Key=f"{TEMPORAL_SUB_BUCKET}/steam_games.json")
+        s3_response = s3_client.get_object(Bucket=os.getenv("LANDING_ZONE_BUCKET"), Key=f"{os.getenv('TEMPORAL_SUB_BUCKET')}/steam_games.json")
         games = json.loads(s3_response["Body"].read().decode("utf-8"))
         images = 0
         videos = 0
@@ -143,9 +145,9 @@ def main():
     try:
         s3_client = boto3.client(
             "s3",
-            endpoint_url=ENDPOINT_URL,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            endpoint_url=os.getenv("ENDPOINT_URL"),
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
         )
         logging.info("Connected to MinIO.")
 
@@ -165,15 +167,4 @@ def main():
     
 
 if __name__ == "__main__":
-    logging.info(f'Starting Steam games scraper.')
-    parser = argparse.ArgumentParser(description='Steam games scraper.')
-    parser.add_argument('-s', '--sleep',    type=float, default=DEFAULT_SLEEP,    help='Waiting time between requests')
-    parser.add_argument('-t', '--timeout',  type=float, default=DEFAULT_TIMEOUT,  help='Timeout for each request')
-    parser.add_argument('-r', '--retries',  type=int,   default=DEFAULT_RETRIES,  help='Number of retries (0 to always retry)')
-    args = parser.parse_args()
-
-    if 'h' in args or 'help' in args:
-        parser.print_help()
-        sys.exit()
-
     main()

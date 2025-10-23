@@ -1,16 +1,68 @@
-import sys
-import os
 import json
 import boto3
 import logging
 from botocore.exceptions import ClientError
+import dotenv
+import os
 
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../global_scripts'))
-sys.path.append(parent_dir)
-from utils import *
-from consts import *
+dotenv.load_dotenv(dotenv.find_dotenv())
 
-setup_logging("process_json.log")
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - [%(levelname)s] - %(message)s',
+    force=True  # override any existing config
+)
+
+############################################################
+
+# Here since it is only used in this script
+STEAM_REQUIRED_KEYS = [
+        # "id",
+        "name",
+        "release_date",
+        "required_age",
+        "price",
+        "dlc_count",
+        "detailed_description", 
+        "about_the_game",
+        "header_image",
+        "support_url",
+        "support_email",
+        "windows",
+        "mac",
+        "linux",
+        "metacritic_score",
+        "metacritic_url",
+        "achievements",
+        "recommendations",
+        "notes",
+        "supported_languages",
+        "full_audio_languages",
+        "packages",
+        "developers",
+        "publishers",
+        "categories",
+        "genres",
+        "screenshots",
+        "movies"
+]
+
+STEAMSPY_REQUIRED_KEYS = [
+        "user_score",
+        "score_rank",
+        "positive",
+        "negative",
+        "estimated_owners",
+        "average_playtime_forever",
+        "average_playtime_2weeks",
+        "median_playtime_forever",
+        "median_playtime_2weeks",
+        "discount",
+        "peak_ccu",
+        "tags"
+]
+
+############################################################
 
 def validate_json_structure(json_data, required_keys):
     if isinstance(json_data, dict):
@@ -49,7 +101,7 @@ def validate_json_structure(json_data, required_keys):
 def process_json(s3_client, formatted_zone_path, trusted_zone_path, required_keys):
     try:
         # List objects in the formatted zone
-        objects = s3_client.list_objects_v2(Bucket=FORMATTED_ZONE_BUCKET, Prefix=formatted_zone_path)
+        objects = s3_client.list_objects_v2(Bucket=os.getenv("FORMATTED_ZONE_BUCKET"), Prefix=formatted_zone_path)
         if 'Contents' not in objects:
             logging.info(f"No files found in {formatted_zone_path}.")
             return
@@ -60,7 +112,7 @@ def process_json(s3_client, formatted_zone_path, trusted_zone_path, required_key
 
             try:
                 # Get the object content
-                response = s3_client.get_object(Bucket=FORMATTED_ZONE_BUCKET, Key=key)
+                response = s3_client.get_object(Bucket=os.getenv("FORMATTED_ZONE_BUCKET"), Key=key)
                 file_content = response['Body'].read().decode('utf-8')
 
                 try:
@@ -86,7 +138,7 @@ def process_json(s3_client, formatted_zone_path, trusted_zone_path, required_key
 
                 # Upload the standardized JSON to the trusted zone
                 s3_client.put_object(
-                    Bucket=TRUSTED_ZONE_BUCKET,
+                    Bucket=os.getenv("TRUSTED_ZONE_BUCKET"),
                     Key=new_key,
                     Body=standardized_data.encode('utf-8')
                 )
@@ -107,9 +159,9 @@ def main():
 
         s3_client = boto3.client(
             "s3",
-            endpoint_url=ENDPOINT_URL,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            endpoint_url=os.getenv("ENDPOINT_URL"),
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
         )
 
         logging.info("Connected to MinIO.")

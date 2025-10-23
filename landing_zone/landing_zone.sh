@@ -3,28 +3,25 @@ set -e
 
 echo "Starting landing zone ingestion process..."
 create_t0=$(date +%s)
-python3 landing_zone/scripts/create.py
+python3 -m landing_zone.create
 create_t1=$(date +%s)
 echo "Buckets and sub-buckets created."
 
 echo "Ingesting game data from Steam and SteamSpy..."
 ingest_games_t0=$(date +%s)
-python3 landing_zone/scripts/ingest_games.py \
-    --steam-outfile steam_games.json \
-    --steamspy-outfile steamspy_games.json \
-    --sleep 3 --retries 5 --autosave 10 --timeout 30
+python3 -m landing_zone.ingest_games
 ingest_games_t1=$(date +%s)
 echo "Game data ingestion completed."
 
 echo "Ingesting media files..."
 ingest_media_t0=$(date +%s)
-python3 landing_zone/scripts/ingest_media.py --sleep 4 --timeout 5 --retries 5
+python3 -m landing_zone.ingest_media
 ingest_media_t1=$(date +%s)
 echo "Media files ingestion completed."
 
 echo "Moving data to persistent storage..."
 move_to_persistent_t0=$(date +%s)
-python3 landing_zone/scripts/move_to_persistent.py
+python3 -m landing_zone.move_to_persistent
 move_to_persistent_t1=$(date +%s)
 echo "Landing zone ingestion process completed."
 
