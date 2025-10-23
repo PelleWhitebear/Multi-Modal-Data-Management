@@ -16,24 +16,72 @@ st.header("Pipeline Execution")
 if "tail" not in st.session_state:
     st.session_state.tail = deque(maxlen=5)
 
+selected_pipeline = st.selectbox("Select what part of the pipeline to run", ["landing zone", "formatted zone", "trusted zone", "exploitation zone", "full pipeline"], index=4)
 log_placeholder = st.code("Log output will appear here...", height=100)
-pipeline_button = st.button("Run Full Pipeline")
+pipeline_button = st.button("Run")
+
+match selected_pipeline:
+    case "landing zone":
+        if pipeline_button:
+            info = st.info("Running landing zone...")
+
+            proc = subprocess.Popen(
+                ["/bin/bash", "/app/landing_zone/landing_zone.sh"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
+            )
+    
+    case "formatted zone":
+        if pipeline_button:
+            info = st.info("Running formatted zone...")
+            proc = subprocess.Popen(
+                ["/bin/bash", "/app/formatted_zone/formatted_zone.sh"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
+            )
+
+    case "trusted zone":
+        if pipeline_button:
+            info = st.info("Running trusted zone...")
+            proc = subprocess.Popen(
+                ["/bin/bash", "/app/trusted_zone/trusted_zone.sh"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
+            )
+
+    case "exploitation zone":
+        if pipeline_button:
+            info = st.info("Running exploitation zone...")
+            proc = subprocess.Popen(
+                ["/bin/bash", "/app/exploitation_zone/exploitation_zone.sh"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
+            )
+    
+    case "full pipeline":
+        if pipeline_button:
+            info = st.info("Running full pipeline...")
+            proc = subprocess.Popen(
+                ["python", "-m", "exploitation_zone.query"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
+            )
 
 if pipeline_button:
-    info = st.info("Running pipeline...")
-
-    proc = subprocess.Popen(
-        ["/bin/bash", "/app/formatted_zone/formatted_zone.sh"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1
-    )
-
     for raw in iter(proc.stdout.readline, ""):
         if not raw:
             break
-        line = raw.rstrip("\n")
+        line = raw.strip("\n")
         st.session_state.tail.append(line)
 
         tail_text = "\n".join(st.session_state.tail)
