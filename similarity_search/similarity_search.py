@@ -114,42 +114,43 @@ def main(args):
         return
 
     results = []
-    for out_type in args.output_type:
-        if out_type not in ["text", "image", "video"]:
-            logging.warning(f"Unsupported output type: {out_type}")
-            continue
+    with open("results.txt", "w") as f:
+        for out_type in args.output_type:
+            if out_type not in ["text", "image", "video"]:
+                logging.warning(f"Unsupported output type: {out_type}")
+                continue
 
-        logging.info(f"Retrieving top {args.top_k} similar items for output type: {out_type}")
-    
-        collection = None
-        for col in collections:
-            if out_type in col.name:
-                collection = chroma_client.get_collection(col.name)
-        if collection is None:
-            logging.error(f"No collection found for output type: {out_type}")
-            continue
+            logging.info(f"Retrieving top {args.top_k} similar items for output type: {out_type}")
+        
+            collection = None
+            for col in collections:
+                if out_type in col.name:
+                    collection = chroma_client.get_collection(col.name)
+            if collection is None:
+                logging.error(f"No collection found for output type: {out_type}")
+                continue
 
-        try:
-            if args.input_type == "text":
-                results.append(collection.query(
-                    query_texts=in_data,
-                    n_results=args.top_k
-                ))
-            else:
-                results.append(collection.query(
-                    query_images=in_data,
-                    n_results=args.top_k
-                ))
-            for query_idx, (ids, distances) in enumerate(zip(results[-1]["ids"], results[-1]["distances"])):
-                logging.info(f"Results for input {query_idx + 1}:")
-                for id, distance in zip(ids, distances):
-                    if out_type in ["image", "video"]:
-                        logging.info(f"     Similarity: {distance}, ID: {id}, Name: {games[id.split('_')[0]]['name']}, Source: {games[id.split('_')[0]]['movies'][0] if out_type=='video' else games[id.split('_')[0]]['screenshots'][int(id.split('_')[1])-1]}")
-                    else:
-                        logging.info(f"     ID={id}, Distance={distance}, Game Name={games[id]['name']}")
-        except Exception:
-            logging.exception(f"Error querying collection for output type: {out_type}")
-            continue
+            try:
+                if args.input_type == "text":
+                    results.append(collection.query(
+                        query_texts=in_data,
+                        n_results=args.top_k
+                    ))
+                else:
+                    results.append(collection.query(
+                        query_images=in_data,
+                        n_results=args.top_k
+                    ))
+                for query_idx, (ids, distances) in enumerate(zip(results[-1]["ids"], results[-1]["distances"])):
+                    f.write(f"Results for input {query_idx + 1}:")
+                    for id, distance in zip(ids, distances):
+                        if out_type in ["image", "video"]:
+                            f.write(f"     Similarity: {distance}, ID: {id}, Name: {games[id.split('_')[0]]['name']}, Source: {games[id.split('_')[0]]['movies'][0] if out_type=='video' else games[id.split('_')[0]]['screenshots'][int(id.split('_')[1])-1]}")
+                        else:
+                            f.write(f"     ID={id}, Distance={distance}, Game Name={games[id]['name']}")
+            except Exception:
+                logging.exception(f"Error querying collection for output type: {out_type}")
+                continue
 
         logging.info(f"Retrieved items for output type: {out_type}")
 
