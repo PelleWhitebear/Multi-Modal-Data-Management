@@ -297,6 +297,8 @@ def Scraper(s3_client, steam_dataset, steamspy_dataset, appIDs = VALID_IDS):
     count = 0
 
     for appID in tqdm(apps):
+      if count == 3:
+        break
       app = SteamRequest(appID, min(4, float(os.getenv("DEFAULT_SLEEP"))), successRequestCount, errorRequestCount, int(os.getenv("DEFAULT_RETRIES")))
       if app:
         steam_game = ParseSteamGame(app)

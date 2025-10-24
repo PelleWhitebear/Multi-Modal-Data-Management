@@ -70,7 +70,7 @@ match selected_pipeline:
         if pipeline_button:
             info = st.info("Running full pipeline...")
             proc = subprocess.Popen(
-                ["python", "-m", "exploitation_zone.query"],
+                ["/bin/bash", "/app/global_scripts/run_pipeline.sh"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
@@ -86,6 +86,8 @@ if pipeline_button:
 
         tail_text = "\n".join(st.session_state.tail)
         log_placeholder.code(tail_text, language="python")
+        if "error" in line.lower():
+            time.sleep(10)
 
         time.sleep(0.02)
 

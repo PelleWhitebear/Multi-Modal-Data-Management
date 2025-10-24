@@ -134,7 +134,7 @@ def process_json(s3_client, formatted_zone_path, trusted_zone_path, required_key
 
                 # Define the new key for the trusted zone
                 base_name = key.split('/')[-1]
-                new_key = f"{trusted_zone_path}/{base_name}"
+                new_key = f"{trusted_zone_path}{base_name}"
 
                 # Upload the standardized JSON to the trusted zone
                 s3_client.put_object(
@@ -169,16 +169,16 @@ def main():
         # Process Steam API JSON files
         process_json(
             s3_client,
-            formatted_zone_path="json/steam",
-            trusted_zone_path="json/steam",
+            formatted_zone_path="json/steam/",
+            trusted_zone_path="json/steam/",
             required_keys=STEAM_REQUIRED_KEYS
         )
 
         # Process SteamSpy API JSON files
         process_json(
             s3_client,
-            formatted_zone_path="json/steamspy",
-            trusted_zone_path="json/steamspy",
+            formatted_zone_path="json/steamspy/",
+            trusted_zone_path="json/steamspy/",
             required_keys=STEAMSPY_REQUIRED_KEYS
         )
 

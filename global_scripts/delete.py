@@ -1,8 +1,10 @@
 import boto3
+import os
 import logging
-from utils import *
-from consts import *
+from dotenv import load_dotenv, find_dotenv
+from global_scripts.utils import *
 
+load_dotenv(find_dotenv())
 setup_logging("delete.log")
 
 def main():
@@ -11,9 +13,9 @@ def main():
     try:
         s3_client = boto3.client(
             "s3",
-            endpoint_url=ENDPOINT_URL,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            endpoint_url=os.getenv("ENDPOINT_URL"),
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
         )
         logging.info("Connected to MinIO.")
 
