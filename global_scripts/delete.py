@@ -1,9 +1,13 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
 import boto3
 import logging
-from utils import *
-from consts import *
+from global_scripts.utils import *
+from global_scripts.consts import *
 
-setup_logging("delete.log")
+#setup_logging("delete.log")
 
 def main():
 
