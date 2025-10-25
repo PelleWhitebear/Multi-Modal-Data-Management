@@ -39,6 +39,8 @@ services:
     tty: true
     networks: 
       - steam-net
+    env_file:
+      - .env
 
 volumes:
   minio_data:

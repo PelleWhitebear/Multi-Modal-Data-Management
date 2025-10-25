@@ -16,3 +16,4 @@ sentence-transformers
 open-clip-torch
 opencv-python-headless
 dotenv
+ffmpeg-python
