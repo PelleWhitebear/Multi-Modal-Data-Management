@@ -9,6 +9,11 @@ docker compose build
 ```
 
 ```bash
+# Before running:
+docker compose down
+```
+
+```bash
 # When need to run a .sh file:
 docker compose run --rm pipeline /app/landing_zone/scripts/landing_zone.sh 
 ```

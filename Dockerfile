@@ -9,6 +9,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 COPY . .
 
+RUN chmod +x */*.sh
+
 # Avoid creating .pyc and cache files
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
