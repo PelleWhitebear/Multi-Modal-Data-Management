@@ -4,8 +4,8 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 import boto3
 import logging
-from global_scripts.utils import * # <-- ¡ESTA ES LA LÍNEA CORRECTA!
-from global_scripts.consts import * # <-- ¡Y ESTA!
+from global_scripts.utils import *
+from global_scripts.consts import *
 
 #setup_logging("delete.log")
 
