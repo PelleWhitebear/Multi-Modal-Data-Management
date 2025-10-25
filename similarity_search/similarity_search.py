@@ -4,9 +4,9 @@ import boto3
 import argparse
 import numpy as np
 import cv2
+import time
 import io
 import json
-from typing import List
 from PIL import Image
 from chromadb.utils.embedding_functions import OpenCLIPEmbeddingFunction
 from chromadb import HttpClient
@@ -113,44 +113,37 @@ def main(args):
         logging.exception("Error listing collections.")
         return
 
-    results = []
-    with open("results.txt", "w") as f:
-        for out_type in args.output_type:
-            if out_type not in ["text", "image", "video"]:
-                logging.warning(f"Unsupported output type: {out_type}")
-                continue
+    for out_type in args.output_type:
+        if out_type not in ["text", "image", "video"]:
+            logging.warning(f"Unsupported output type: {out_type}")
+            continue
 
-            logging.info(f"Retrieving top {args.top_k} similar items for output type: {out_type}")
-        
-            collection = None
-            for col in collections:
-                if out_type in col.name:
-                    collection = chroma_client.get_collection(col.name)
-            if collection is None:
-                logging.error(f"No collection found for output type: {out_type}")
-                continue
+        logging.info(f"Retrieving top {args.top_k} similar items for output type: {out_type}")
+    
+        collection = None
+        for col in collections:
+            if out_type in col.name:
+                collection = chroma_client.get_collection(col.name)
+        if collection is None:
+            logging.error(f"No collection found for output type: {out_type}")
+            continue
 
-            try:
-                if args.input_type == "text":
-                    results.append(collection.query(
-                        query_texts=in_data,
-                        n_results=args.top_k
-                    ))
-                else:
-                    results.append(collection.query(
-                        query_images=in_data,
-                        n_results=args.top_k
-                    ))
-                for query_idx, (ids, distances) in enumerate(zip(results[-1]["ids"], results[-1]["distances"])):
-                    f.write(f"Results for input {query_idx + 1}:")
-                    for id, distance in zip(ids, distances):
-                        if out_type in ["image", "video"]:
-                            f.write(f"     Similarity: {distance}, ID: {id}, Name: {games[id.split('_')[0]]['name']}, Source: {games[id.split('_')[0]]['movies'][0] if out_type=='video' else games[id.split('_')[0]]['screenshots'][int(id.split('_')[1])-1]}")
-                        else:
-                            f.write(f"     ID={id}, Distance={distance}, Game Name={games[id]['name']}")
-            except Exception:
-                logging.exception(f"Error querying collection for output type: {out_type}")
-                continue
+        try:
+            if args.input_type == "text":
+                results = collection.query(
+                    query_texts=in_data,
+                    n_results=args.top_k
+                )
+            else:
+                results = collection.query(
+                    query_images=in_data,
+                    n_results=args.top_k
+                )
+            for id, distance in zip(results["ids"], results["distances"]):
+                logging.info(f"@@@{out_type}###{id}###{distance}@@@")
+        except Exception:
+            logging.exception(f"Error querying collection for output type: {out_type}")
+            continue
 
         logging.info(f"Retrieved items for output type: {out_type}")
 

@@ -1,4 +1,3 @@
-# Call all .sh in each folder while tracking the time
 #!/bin/bash
 set -e
 echo "Running the full data pipeline..."
@@ -17,7 +16,6 @@ echo "- - - - - FORMATTED ZONE COMPLETE - - - - -"
 echo "- - - - - STARTING TRUSTED ZONE - - - - -"
 t4=$(date +%s)
 bash trusted_zone/trusted_zone.sh
-python3 -m exploitation_zone.create_descriptions
 t5=$(date +%s)
 echo "- - - - - TRUSTED ZONE COMPLETE - - - - -"
 
