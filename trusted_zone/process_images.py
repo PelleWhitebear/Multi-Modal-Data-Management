@@ -16,11 +16,11 @@ logging.basicConfig(
 
 def delete_images(s3_client):
     bucket = os.getenv('TRUSTED_ZONE_BUCKET')
-    prefix = "/media/image/"
-    logging.info(f"Preparing to delete all objects in sub-bucket {bucket}{prefix}")
+    prefix = "media/image/"
+    logging.info(f"Preparing to delete all objects in sub-bucket {bucket}/{prefix}")
     try:
         # list objects to delete
-        objects_to_delete = s3_client.list_objects_v2(Bucket=os.getenv('TRUSTED_ZONE_BUCKET'), Prefix="media/image/")
+        objects_to_delete = s3_client.list_objects_v2(Bucket=os.getenv('TRUSTED_ZONE_BUCKET'), Prefix=prefix)
         if 'Contents' not in objects_to_delete:
             logging.warning(f"No objects found with prefix '{prefix}'. Nothing to delete.")
             return True
