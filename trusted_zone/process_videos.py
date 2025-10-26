@@ -21,11 +21,11 @@ TARGET_FPS = 30
 
 def delete_videos(s3_client):
     bucket = os.getenv('TRUSTED_ZONE_BUCKET')
-    prefix = "/media/video/"
-    logging.info(f"Preparing to delete all objects in sub-bucket {bucket}{prefix}")
+    prefix = "media/video/"
+    logging.info(f"Preparing to delete all objects in sub-bucket {bucket}/{prefix}")
     try:
         # list objects to delete
-        objects_to_delete = s3_client.list_objects_v2(Bucket=os.getenv('TRUSTED_ZONE_BUCKET'), Prefix="media/video/")
+        objects_to_delete = s3_client.list_objects_v2(Bucket=os.getenv('TRUSTED_ZONE_BUCKET'), Prefix=prefix)
         if 'Contents' not in objects_to_delete:
             logging.warning(f"No objects found with prefix '{prefix}'. Nothing to delete.")
             return True
@@ -48,6 +48,7 @@ def delete_videos(s3_client):
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
         return False
+
 
 def process_videos(s3_client, formatted_zone_prefix, trusted_zone_prefix):
     try:
@@ -110,7 +111,7 @@ def process_videos(s3_client, formatted_zone_prefix, trusted_zone_prefix):
 
                     # Define new key for trusted zone
                     base_name = key.split('/')[-1]
-                    new_key = f"{trusted_zone_prefix}/{base_name}"
+                    new_key = f"{trusted_zone_prefix}{base_name}"
 
                     # Upload to trusted zone
                     s3_client.upload_file(
@@ -132,6 +133,7 @@ def process_videos(s3_client, formatted_zone_prefix, trusted_zone_prefix):
     except Exception as e:
         logging.critical(f"Unexpected error in process_videos: {e}", exc_info=True)
 
+
 def main():
     try:
         s3_client = boto3.client(
@@ -144,8 +146,8 @@ def main():
         delete_videos(s3_client)
         process_videos(
             s3_client,
-            formatted_zone_prefix="media/video",
-            trusted_zone_prefix="media/video"
+            formatted_zone_prefix="media/video/",
+            trusted_zone_prefix="media/video/"
         )
         logging.info("Video processing completed.")
     except ClientError as e:

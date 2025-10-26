@@ -14,6 +14,7 @@ logging.basicConfig(
     force=True
 )
 
+
 def delete_images(s3_client):
     bucket = os.getenv('TRUSTED_ZONE_BUCKET')
     prefix = "media/image/"
@@ -83,7 +84,7 @@ def process_images(s3_client, formatted_zone_prefix, trusted_zone_prefix):
 
                 # Define new key for trusted zone
                 base_name = key.split('/')[-1]
-                new_key = f"{trusted_zone_prefix}/{base_name}"
+                new_key = f"{trusted_zone_prefix}{base_name}"
 
                 # Upload to trusted zone
                 s3_client.upload_fileobj(buffer, os.getenv("TRUSTED_ZONE_BUCKET"), new_key)
@@ -97,6 +98,7 @@ def process_images(s3_client, formatted_zone_prefix, trusted_zone_prefix):
     except Exception as e:
         logging.critical(f"Unexpected error in process_images: {e}", exc_info=True)
 
+
 def main():
     try:
         s3_client = boto3.client(
@@ -109,8 +111,8 @@ def main():
         logging.info("Connected to MinIO.")
         process_images(
             s3_client,
-            formatted_zone_prefix="media/image",
-            trusted_zone_prefix="media/image"
+            formatted_zone_prefix="media/image/",
+            trusted_zone_prefix="media/image/"
         )
         logging.info("Image processing completed.")
     except ClientError as e:
