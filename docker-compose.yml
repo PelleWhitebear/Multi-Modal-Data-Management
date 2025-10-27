@@ -42,6 +42,21 @@ services:
     env_file:
       - .env
 
+  streamlit:
+    build: .
+    container_name: streamlit
+    depends_on:
+      - chroma
+      - minio
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./:/app
+    environment:
+      - STREAMLIT_SERVER_PORT=8501
+      - PYTHONUNBUFFERED=1
+    command: streamlit run streamlit/app.py --server.port=8501 --server.address=0.0.0.0
+
 volumes:
   minio_data:
   chroma_data:

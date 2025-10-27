@@ -17,3 +17,4 @@ open-clip-torch
 opencv-python-headless
 dotenv
 ffmpeg-python
+streamlit
