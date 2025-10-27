@@ -11,6 +11,8 @@ services:
       MINIO_ROOT_USER: ROOTNAME
       MINIO_ROOT_PASSWORD: CHANGEME123
     command: server /data --console-address ":9001"
+    networks: 
+      - steam-net
 
   chroma:
     image: chromadb/chroma
@@ -22,15 +24,23 @@ services:
     environment:
       - IS_PERSISTENT=TRUE
       - PERSIST_DIRECTORY=/chroma
+    networks: 
+      - steam-net
 
   pipeline:
     build: .
     container_name: pipeline
+    dns: 
+    - 8.8.8.8 
     depends_on:
       - minio
       - chroma
     stdin_open: true
     tty: true
+    networks: 
+      - steam-net
+    env_file:
+      - .env
 
   streamlit:
     build: .
@@ -50,3 +60,7 @@ services:
 volumes:
   minio_data:
   chroma_data:
+
+networks:  
+  steam-net: 
+    driver: bridge

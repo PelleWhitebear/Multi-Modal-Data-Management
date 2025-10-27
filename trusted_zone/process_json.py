@@ -4,190 +4,229 @@ import logging
 from botocore.exceptions import ClientError
 import dotenv
 import os
+import numbers
 
 dotenv.load_dotenv(dotenv.find_dotenv())
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - [%(levelname)s] - %(message)s',
-    force=True  # override any existing config
+    force=True 
 )
 
-############################################################
-
-# Here since it is only used in this script
 STEAM_REQUIRED_KEYS = [
-        # "id",
-        "name",
-        "release_date",
-        "required_age",
-        "price",
-        "dlc_count",
-        "detailed_description", 
-        "about_the_game",
-        "header_image",
-        "support_url",
-        "support_email",
-        "windows",
-        "mac",
-        "linux",
-        "metacritic_score",
-        "metacritic_url",
-        "achievements",
-        "recommendations",
-        "notes",
-        "supported_languages",
-        "full_audio_languages",
-        "packages",
-        "developers",
-        "publishers",
-        "categories",
-        "genres",
-        "screenshots",
-        "movies"
+    "name", "release_date", "required_age", "price", "dlc_count",
+    "detailed_description", "about_the_game", "header_image", "support_url",
+    "support_email", "windows", "mac", "linux", "metacritic_score",
+    "metacritic_url", "achievements", "recommendations", "notes",
+    "supported_languages", "full_audio_languages", "packages", "developers",
+    "publishers", "categories", "genres", "screenshots", "movies"
 ]
-
 STEAMSPY_REQUIRED_KEYS = [
-        "user_score",
-        "score_rank",
-        "positive",
-        "negative",
-        "estimated_owners",
-        "average_playtime_forever",
-        "average_playtime_2weeks",
-        "median_playtime_forever",
-        "median_playtime_2weeks",
-        "discount",
-        "peak_ccu",
-        "tags"
+    "user_score", "score_rank", "positive", "negative", "estimated_owners",
+    "average_playtime_forever", "average_playtime_2weeks",
+    "median_playtime_forever", "median_playtime_2weeks", "discount",
+    "peak_ccu", "tags"
 ]
+NON_NEGATIVE_STEAM_FIELDS = ["required_age", "price", "dlc_count", "recommendations"]
+EXPECTED_LIST_FIELDS = [
+    "supported_languages", "full_audio_languages", "packages", "developers",
+    "publishers", "categories", "genres", "screenshots", "movies"
+]
+EXPECTED_BOOL_FIELDS = ["windows", "mac", "linux"]
+EXPECTED_INT_FIELDS_STEAM = ["required_age", "dlc_count", "metacritic_score", "achievements", "recommendations"]
+EXPECTED_INT_FIELDS_STEAMSPY = [
+    "user_score", "positive", "negative", "average_playtime_forever", "average_playtime_2weeks", 
+    "median_playtime_forever", "median_playtime_2weeks", "peak_ccu"
+]
+EXPECTED_NUMERIC_FIELDS_STEAM = ["price"]
+EXPECTED_DICT_FIELDS_STEAMSPY = ["tags"]
 
-############################################################
 
-def validate_json_structure(json_data, required_keys):
-    if isinstance(json_data, dict):
-        # If all values are dicts (Steam/SteamSpy format), validate each
-        if all(isinstance(v, dict) for v in json_data.values()):
-            for k, v in json_data.items():
-                missing = [key for key in required_keys if key not in v]
-                if missing:
-                    logging.debug(f"Entry {k} missing keys: {missing}")
-                    return False
-            return True
-        else:
-            present = set(json_data.keys())
-            missing = [key for key in required_keys if key not in json_data]
-            logging.debug(f"Top-level keys present: {present}, missing: {missing}")
-            return not missing
-    elif isinstance(json_data, list):
-        if not json_data:
-            logging.debug("JSON list is empty.")
-            return False
-        present = set(json_data[0].keys()) if isinstance(json_data[0], dict) else set()
-        missing = [key for key in required_keys if key not in present]
-        logging.debug(f"First item keys present: {present}, missing: {missing}")
-        for i, item in enumerate(json_data):
-            if not isinstance(item, dict):
-                logging.debug(f"Item {i} is not a dict: {item}")
-                return False
-            if not all(key in item for key in required_keys):
-                logging.debug(f"Item {i} missing required keys.")
-                return False
-        return True
-    else:
-        logging.debug(f"JSON data is neither dict nor list: {type(json_data)}")
-        return False
+def validate_and_clean_entry(game_id, game_data, required_keys, dataset_name):
+    missing_keys = [key for key in required_keys if key not in game_data]
+    if missing_keys:
+        logging.warning(f"[{dataset_name} ID: {game_id}] Missing required keys: {missing_keys}. Skipping entry.")
+        return None
 
-def process_json(s3_client, formatted_zone_path, trusted_zone_path, required_keys):
+    cleaned_data = game_data.copy()
+
+    # type validation
+    expected_int_fields = EXPECTED_INT_FIELDS_STEAM if dataset_name == "Steam" else EXPECTED_INT_FIELDS_STEAMSPY
+    expected_numeric_fields = EXPECTED_NUMERIC_FIELDS_STEAM if dataset_name == "Steam" else []
+    expected_dict_fields = EXPECTED_DICT_FIELDS_STEAMSPY if dataset_name == "SteamSpy" else []
+
+    # check integers
+    for field in expected_int_fields:
+        value = cleaned_data.get(field)
+        if value is not None and not isinstance(value, int):
+            try:
+                cleaned_data[field] = int(value)
+            except (ValueError, TypeError):
+                 logging.warning(f"[{dataset_name} ID: {game_id}] Field '{field}' has non-integer value '{value}'. Skipping entry.")
+                 return None
+
+    # check numerics
+    for field in expected_numeric_fields:
+         value = cleaned_data.get(field)
+         if value is not None and not isinstance(value, numbers.Number):
+             try:
+                 cleaned_data[field] = float(value)
+             except (ValueError, TypeError):
+                  logging.warning(f"[{dataset_name} ID: {game_id}] Field '{field}' has non-numeric value '{value}'. Skipping entry.")
+                  return None
+
+    # check Booleans
+    for field in EXPECTED_BOOL_FIELDS:
+        if field in cleaned_data and not isinstance(cleaned_data.get(field), bool):
+            logging.warning(f"[{dataset_name} ID: {game_id}] Field '{field}' has non-boolean value '{cleaned_data.get(field)}'. Skipping entry.")
+            return None 
+
+    # check that Lists are Lists
+    for field in EXPECTED_LIST_FIELDS:
+        if field in cleaned_data:
+            value = cleaned_data.get(field)
+            if value is None:
+                cleaned_data[field] = [] 
+            elif not isinstance(value, list):
+                logging.warning(f"[{dataset_name} ID: {game_id}] Field '{field}' expected list, got {type(value).__name__}. Skipping entry.")
+                return None
+
+    # check that Dicts are Dicts
+    for field in expected_dict_fields:
+         if field in cleaned_data:
+            value = cleaned_data.get(field)
+            if value is None:
+                cleaned_data[field] = {} 
+            elif not isinstance(value, dict):
+                 logging.warning(f"[{dataset_name} ID: {game_id}] Field '{field}' expected dict, got {type(value).__name__}. Skipping entry.")
+                 return None
+
+    # check non negative
+    if dataset_name == "Steam":
+        for field in NON_NEGATIVE_STEAM_FIELDS:
+            value = cleaned_data.get(field)
+            if isinstance(value, numbers.Number) and value < 0:
+                logging.warning(f"[{dataset_name} ID: {game_id}] Field '{field}' has negative value {value}. Correcting to 0.")
+                cleaned_data[field] = 0 
+
+    return cleaned_data
+
+
+def process_json_trusted(s3_client, formatted_zone_path, trusted_zone_path, required_keys, dataset_name):
+    processed_data = {}
+    invalid_entry_count = 0
+    total_entries_read = 0
+
     try:
-        # List objects in the formatted zone
         objects = s3_client.list_objects_v2(Bucket=os.getenv("FORMATTED_ZONE_BUCKET"), Prefix=formatted_zone_path)
-        if 'Contents' not in objects:
+        if 'Contents' not in objects or not objects['Contents']:
             logging.info(f"No files found in {formatted_zone_path}.")
             return
 
+        file_key = None
         for obj in objects['Contents']:
-            key = obj['Key']
-            logging.info(f"Processing file: {key}")
+            if not obj['Key'].endswith('/') and obj['Key'].lower().endswith('.json'):
+                file_key = obj['Key']
+                break 
 
-            try:
-                # Get the object content
-                response = s3_client.get_object(Bucket=os.getenv("FORMATTED_ZONE_BUCKET"), Key=key)
-                file_content = response['Body'].read().decode('utf-8')
+        if not file_key:
+             logging.warning(f"No .json files found directly under {formatted_zone_path}")
+             return
 
-                try:
-                    data = json.loads(file_content)
-                except json.JSONDecodeError as e:
-                    logging.error(f"Failed to parse JSON for file {key}: {e}")
-                    continue
+        logging.info(f"Processing file: {file_key}")
+        try:
+            response = s3_client.get_object(Bucket=os.getenv("FORMATTED_ZONE_BUCKET"), Key=file_key)
+            file_content = response['Body'].read().decode('utf-8')
+            raw_data = json.loads(file_content)
+        except (ClientError, json.JSONDecodeError, Exception) as e:
+            logging.error(f"Failed to load or parse JSON from {file_key}: {e}. Skipping file.")
+            return
 
-                # Log the parsed JSON content for debugging
-                logging.debug(f"Parsed JSON content of {key}: {data}")
+        if not isinstance(raw_data, dict):
+             logging.error(f"Expected JSON to be a dictionary (object), but got {type(raw_data).__name__}. Skipping file {file_key}.")
+             return
 
-                # Validate JSON structure
-                if not validate_json_structure(data, required_keys):
-                    logging.warning(f"Skipping invalid JSON file: {key}")
-                    continue
+        total_entries_read = len(raw_data)
+        logging.info(f"Read {total_entries_read} entries from {file_key}.")
 
-                # Standardize the JSON formatting
-                standardized_data = json.dumps(data, indent=4, sort_keys=True)
+        for game_id, game_data in raw_data.items():
+            if not isinstance(game_data, dict):
+                logging.warning(f"[{dataset_name} ID: {game_id}] Entry data is not a dictionary. Skipping.")
+                invalid_entry_count += 1
+                continue
 
-                # Define the new key for the trusted zone
-                base_name = key.split('/')[-1]
-                new_key = f"{trusted_zone_path}{base_name}"
+            cleaned_entry = validate_and_clean_entry(game_id, game_data, required_keys, dataset_name)
 
-                # Upload the standardized JSON to the trusted zone
-                s3_client.put_object(
-                    Bucket=os.getenv("TRUSTED_ZONE_BUCKET"),
-                    Key=new_key,
-                    Body=standardized_data.encode('utf-8')
-                )
-                logging.info(f"Successfully processed and uploaded: {new_key}")
+            if cleaned_entry is not None:
+                processed_data[game_id] = cleaned_entry
+            else:
+                invalid_entry_count += 1
 
-            except ClientError as e:
-                logging.error(f"Boto3 error processing file {key}: {e}")
-            except Exception as e:
-                logging.error(f"Unexpected error processing file {key}: {e}")
+        logging.info(f"Validation complete for {file_key}: {len(processed_data)} valid entries, {invalid_entry_count} invalid entries skipped.")
+
+        if not processed_data:
+             logging.warning(f"No valid data remaining for {file_key} after cleaning. Nothing to upload.")
+             return
+
+        standardized_data_str = json.dumps(processed_data, indent=4, sort_keys=True)
+
+        base_name = file_key.split('/')[-1]
+        if not trusted_zone_path.endswith('/'):
+            trusted_zone_path += '/'
+        new_key = f"{trusted_zone_path}{base_name}"
+
+        s3_client.put_object(
+            Bucket=os.getenv("TRUSTED_ZONE_BUCKET"),
+            Key=new_key,
+            Body=standardized_data_str.encode('utf-8'),
+            ContentType='application/json' 
+        )
+        logging.info(f"Successfully processed and uploaded cleaned data to: {new_key}")
 
     except ClientError as e:
-        logging.critical(f"Boto3 error listing objects in {formatted_zone_path}: {e}", exc_info=True)
+        logging.critical(f"Boto3 error during processing for {formatted_zone_path}: {e}", exc_info=True)
     except Exception as e:
-        logging.critical(f"Unexpected error in process_json: {e}", exc_info=True)
+        logging.critical(f"Unexpected error in process_json_trusted for {formatted_zone_path}: {e}", exc_info=True)
+
 
 def main():
     try:
-
         s3_client = boto3.client(
             "s3",
             endpoint_url=os.getenv("ENDPOINT_URL"),
             aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
         )
-
         logging.info("Connected to MinIO.")
 
-        # Process Steam API JSON files
-        process_json(
+        # process Steam API JSON files
+        logging.info("Starting Steam JSON Processing...")
+        process_json_trusted(
             s3_client,
-            formatted_zone_path="json/steam/",
-            trusted_zone_path="json/steam/",
-            required_keys=STEAM_REQUIRED_KEYS
+            formatted_zone_path="json/steam/", 
+            trusted_zone_path="json/steam/", 
+            required_keys=STEAM_REQUIRED_KEYS,
+            dataset_name="Steam"
         )
 
-        # Process SteamSpy API JSON files
-        process_json(
+        # process SteamSpy API JSON files
+        logging.info("Starting SteamSpy JSON Processing...")
+        process_json_trusted(
             s3_client,
             formatted_zone_path="json/steamspy/",
             trusted_zone_path="json/steamspy/",
-            required_keys=STEAMSPY_REQUIRED_KEYS
+            required_keys=STEAMSPY_REQUIRED_KEYS,
+            dataset_name="SteamSpy"
         )
 
-        logging.info("Processing completed.")
+        logging.info("JSON Processing Completed")
 
     except ClientError as e:
-        logging.error(f"A Boto3 error occurred: {e}", exc_info=True)
+        logging.error(f"A Boto3 error occurred in main: {e}", exc_info=True)
     except Exception as e:
         logging.error(f"An unexpected error occurred in main: {e}", exc_info=True)
+
 
 if __name__ == "__main__":
     main()
