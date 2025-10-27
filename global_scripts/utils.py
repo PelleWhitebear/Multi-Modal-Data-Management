@@ -17,12 +17,14 @@ def minio_init():
     :return: Configured S3 client
     """
     try:
-        return boto3.client(
+        s3_client = boto3.client(
             "s3",
             endpoint_url=os.getenv("ENDPOINT_URL"),
             aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
         )
+        logging.info("Connected to MinIO S3 successfully.")
+        return s3_client
     except Exception:
         logging.exception("Error connecting to MinIO.")
         return
@@ -66,13 +68,13 @@ def query_gemini(gemini_client, prompt, config=None):
         if config:
             response = gemini_client.models.generate_content(
                 model=os.getenv("GEMINI_MODEL"),
-                prompt=prompt,
+                contents=prompt,
                 config=config
             )
         else:
             response = gemini_client.models.generate_content(
                 model=os.getenv("GEMINI_MODEL"),
-                prompt=prompt
+                contents=prompt
             )
         return response.text
     except Exception:
@@ -124,7 +126,7 @@ def query_chromadb(chroma_client, query_type, query, collection, k):
                 query_images=[query],
                 n_results=k
             )
-        return [(id, distance) for id, distance in zip(results["ids"], results["distances"])]
+        return [(id, distance) for id, distance in zip(results["ids"][0], results["distances"][0])]
     except Exception:
         logging.exception(f"Error querying ChromaDB collection '{collection}'.")
         return []
@@ -141,7 +143,6 @@ def load_games_from_minio(s3_client, bucket, prefix, suffix):
     """
     try:
         objs = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
-
         if "Contents" not in objs:
             logging.error("No JSON files found in exploitation-zone.")
             return {}

@@ -69,51 +69,51 @@ Your output MUST be a JSON object containing a single key, "filtered_games", whi
 ---
 
 **Input:**
-{
+{{
   "query": "I'm looking for a souls-like game with a dark fantasy setting and fast-paced combat.",
   "games": [
-    {
+    {{
       "name": "Shadow of the Ashen King",
       "description": "In a world shrouded in eternal dusk, you are a lone warrior against corrupted gods. Features punishing, high-speed combat and deep exploration of gothic ruins."
-    },
-    {
+    }},
+    {{
       "name": "Cozy Farm Meadows",
       "description": "Leave the stressful city life behind! Grow crops, raise cute animals, and build friendships with cheerful villagers in this relaxing farming simulator."
-    },
-    {
+    }},
+    {{
       "name": "Blade of the Abyss",
       "description": "A challenging action-RPG where you must master a fluid, combo-based combat system to survive in a grim, interconnected world."
-    }
+    }}
   ]
-}
+}}
 
 **Output:**
 ```json
-{
+{{
   "filtered_games": [
-    {
+    {{
       "is_relevant": true,
       "reasoning": "This game matches the dark fantasy setting and fast-paced, punishing combat requested."
-    },
-    {
+    }},
+    {{
       "is_relevant": false,
       "reasoning": "This is a relaxing farming simulator and does not match the souls-like genre."
-    },
-    {
+    }},
+    {{
       "is_relevant": true,
       "reasoning": "This game aligns with the request for a challenging action-RPG with fluid combat."
-    }
+    }}
   ]
-}
+}}
 ```
 
 ---
 
 **Input:**
-{
+{{
   "query": "{query}",
   "games": {games}
-}
+}}
 
 **Output:**
 """
@@ -133,27 +133,28 @@ Synthesize all this information into a single, conversational, and engaging mess
 - **Integrate the "Why":** Seamlessly weave the `reasoning` into your recommendation to explain *why* it fits the user's request.
 - **Clear and Organized:** Present the recommendations clearly, perhaps using bullet points or bolding the game titles.
 - **Single Response:** Your entire output should be the text message to the user. Do not use JSON or any other structured format.
+- **Stick to the Games Provided:** Only recommend the games given to you; do not invent new ones. If no games are provided, politely inform the user that no suitable recommendations were found.
 
 ---
 
 **Example:**
 
 **Input:**
-{
+{{
   "query": "I'm looking for a souls-like game with a dark fantasy setting and fast-paced combat.",
   "games": [
-    {
+    {{
       "name": "Shadow of the Ashen King",
       "description": "In a world shrouded in eternal dusk, you are a lone warrior against corrupted gods. Features punishing, high-speed combat and deep exploration of gothic ruins.",
       "reasoning": "This game matches the dark fantasy setting and fast-paced, punishing combat requested."
-    },
-    {
+    }},
+    {{
       "name": "Blade of the Abyss",
       "description": "A challenging action-RPG where you must master a fluid, combo-based combat system to survive in a grim, interconnected world.",
       "reasoning": "This game aligns with the request for a challenging action-RPG with fluid combat."
-    }
+    }}
   ]
-}
+}}
 
 **Output:**
 "Hello! Based on your request for a souls-like with a dark fantasy setting and fast combat, I've found a couple of games you'll love:
@@ -166,10 +167,21 @@ I hope this helps you find your next great game!"
 ---
 
 **Input:**
-{
+{{
+  "query": "I really like games about onions and guns.",
+  "games": []
+}}
+
+**Output:**
+"Hello! I took a look for games that match your interest in onions and guns, but unfortunately, I couldn't find any suitable recommendations at the moment. However, if you have any other preferences or genres in mind, feel free to let me know, and I'll be happy to help you find some great games!"
+
+---
+
+**Input:**
+{{
   "query": "{query}",
   "games": {games}
-}
+}}
 
 **Output:**
 """

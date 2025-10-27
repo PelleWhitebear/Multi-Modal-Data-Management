@@ -101,6 +101,8 @@ def main():
                 break
             line = raw.strip("\n")
             st.session_state.tail.append(line)
+            if "Loaded built-in ViT-B-32 model config." in line:
+                tail_text += "\nNote: The first run may take longer due to model loading."
 
             tail_text = "\n".join(st.session_state.tail)
             log_placeholder.code(tail_text, language="python")
