@@ -190,6 +190,7 @@ def create_bucket(s3_client, bucket):
 
 def create_sub_bucket(s3_client, bucket, key):
     """Create a sub-bucket inside S3 bucket. Slighty modified version of this, now also handling already exisiting buckets:
+    
     https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-example-creating-buckets.html#create-an-amazon-s3-bucket
 
     :param s3_client: The S3 client connection
@@ -337,7 +338,7 @@ def move_to_persistent(s3_client, bucket, temporal_sub_bucket, persistent_sub_bu
 def delete_items(s3_client, bucket, prefix=""):
     """
     Deletes all objects in the specified S3 bucket and prefix.
-    
+
     :param s3_client: Boto3 S3 client
     :param bucket: The S3 bucket name
     :param prefix: The prefix path inside the bucket

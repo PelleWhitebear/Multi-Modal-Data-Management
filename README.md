@@ -1,29 +1,24 @@
-# Multi-Modal-Data-Management
-Multi-Modal Data Management system for using data from Steam API's.
+# ADSDB Project: Multimodal Data Warehouse
 
-# How to run
+This repository contains the source code for the Multimodal Data Warehouse Project from the Algorithms, Data Structures and Databases course (ADSDB-MDS). 
 
-```bash
-# After any change:
-docker compose build
-```
+In this project, we implement an end-to-end Data Warehouse with its ETL pipeline code. In addition, we have also developed a Streamlit UI where the user can:
 
-```bash
-# Before running:
-docker compose down
-```
+- Run the whole ETL pipeline.
+- Run a specific part of the ETL pipeline.
+- Perform same-modality and multimodal similarity search between text, image and video data.
+- Chat with a Game Recommendation Assistant that will help the user find the next game to play from our catalog based on their preferences. (RAG)
 
-```bash
-# When need to run a .sh file:
-docker compose run --rm pipeline /app/landing_zone/scripts/landing_zone.sh 
-```
+## How to run
 
-```bash
-# When need to run a specific .py file:
-docker compose run --rm pipeline python -m exploitation_zone.scripts.query # Notice it doesn't have the .py
-```
+1. Initialize docker in your machine.
 
-```bash
-# To turn everything off:
-docker compose down
-```
+2. Run the following commands:
+    ```bash
+    docker compose build
+    docker compose up -d streamlit
+    ```
+
+3. Go to ``http://localhost:8501`` and start playing around.
+
+**Note that the pipeline has to be run in order to start using the similarity search / RAG tools.**
