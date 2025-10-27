@@ -101,10 +101,10 @@ def main():
                 break
             line = raw.strip("\n")
             st.session_state.tail.append(line)
+            tail_text = "\n".join(st.session_state.tail)
             if "Loaded built-in ViT-B-32 model config." in line:
                 tail_text += "\nNote: The first run may take longer due to model loading."
 
-            tail_text = "\n".join(st.session_state.tail)
             log_placeholder.code(tail_text, language="python")
             if "error" in line.lower():
                 time.sleep(10)
@@ -125,13 +125,76 @@ def main():
 
     if task == "RAG":
         st.header("Retrieval-Augmented Generation (RAG)")
-        user_query = st.text_area("Enter your query", "Sample text input...")
 
-        if st.button("Run RAG"):
-            st.info(f"Answering RAG query...")
-            time.sleep(2)
-            st.success(f"Simulated RAG response:")
-            st.write("This is a simulated RAG response based on the provided input.")
+        def stream_response(text):
+            for line in text.splitlines(keepends=True):
+                words = line.rstrip("\n").split()
+                for word in words:
+                    yield word + " "
+                    time.sleep(0.05)
+                if line.endswith("\n"):
+                    yield "\n"
+
+        chat_container = st.container()
+        input_container = st.container()
+
+        with chat_container:
+            if "messages" not in st.session_state:
+                st.session_state.messages = [
+                    {"role": "assistant", "content": "I'm a game recommendation assistant. Tell me what do you like!"}
+                ]
+            
+            for message in st.session_state.messages:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
+
+        with input_container:
+            prompt = st.chat_input("Say something...")
+
+        if prompt:
+            with chat_container:
+                with st.chat_message("user"):
+                    st.markdown(prompt)
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            
+            with chat_container:
+                with st.chat_message("assistant"):
+                    spinner = st.spinner("Thinking...")
+                    with spinner:
+                        rag_proc = subprocess.Popen(
+                            ["python", "-m", "similarity_search.rag",
+                            "--query", prompt],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            text=True,
+                            bufsize=1
+                        )
+                        
+                        last_result = ""
+                        capturing = False
+                        
+                        for raw in iter(rag_proc.stdout.readline, ""):
+                            if not raw:
+                                break
+                            
+                            if "@@@" in raw:
+                                capturing = not capturing
+                                parts = raw.split("@@@", )
+                                if len(parts) > 1 and parts[1]:
+                                    # Capture content after the first @@@ and add a newline
+                                    last_result += parts[1]
+                                continue
+
+                            if capturing:
+                                last_result += raw
+                                
+                        rag_proc.stdout.close()
+                        rag_proc.wait()
+                    
+                    st.write_stream(stream_response(last_result))
+
+                st.session_state.messages.append({"role": "assistant", "content": last_result})
+                st.rerun()
     else:
         st.header("Similarity Search")
         query_col1, query_col2 = st.columns(2)
