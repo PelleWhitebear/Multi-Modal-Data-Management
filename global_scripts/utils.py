@@ -292,6 +292,12 @@ def move_to_persistent(s3_client, bucket, temporal_sub_bucket, persistent_sub_bu
     """
     Move files from temporal landing to persistent landing, applying naming convention.
     At the end, we delete the original raw data from temporal.
+
+    :param s3_client: The S3 client connection
+    :param bucket: The parent bucket
+    :param temporal_sub_bucket: The temporal sub-bucket name
+    :param persistent_sub_bucket: The persistent sub-bucket name
+    :param data_source: The data source name
     """
     objects = s3_client.list_objects_v2(Bucket=bucket, Prefix=f"{temporal_sub_bucket}/")
 
@@ -331,6 +337,7 @@ def move_to_persistent(s3_client, bucket, temporal_sub_bucket, persistent_sub_bu
 def delete_items(s3_client, bucket, prefix=""):
     """
     Deletes all objects in the specified S3 bucket and prefix.
+    
     :param s3_client: Boto3 S3 client
     :param bucket: The S3 bucket name
     :param prefix: The prefix path inside the bucket
