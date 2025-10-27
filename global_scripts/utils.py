@@ -7,6 +7,9 @@ from urllib3.exceptions import HTTPError
 from chromadb import HttpClient
 from google import genai
 import json
+import dotenv
+
+dotenv.load_dotenv(dotenv.find_dotenv())
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [%(levelname)s] - %(message)s')
 
@@ -23,6 +26,9 @@ def minio_init():
             aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
         )
+        if not s3_client:
+            logging.error("Failed to create MinIO S3 client.")
+            return
         logging.info("Connected to MinIO S3 successfully.")
         return s3_client
     except Exception:
@@ -165,16 +171,17 @@ def create_bucket(s3_client, bucket):
 
     :param s3_client: The S3 client connection
     :param bucket_name: Bucket to create
-    :return: True if bucket created, else False
+    :return: True if bucket created, else False 
     """
     try:
+        logging.info(f"Creating bucket: {bucket}.")
         s3_client.create_bucket(Bucket=bucket)
         logging.info(f"Bucket '{bucket}' created.")
     except (ClientError, BotoCoreError) as e:
         if e.response["Error"]["Code"] == "BucketAlreadyOwnedByYou":
             logging.info(f"Bucket '{bucket}' already exists.")
         else:
-            logging.error(f"Unexpected error creating bucket '{bucket}': {e}")
+            logging.exception(f"Unexpected error creating bucket '{bucket}'.")
             return False
     except Exception:
         logging.exception(f"Unexpected error creating bucket '{bucket}'.")

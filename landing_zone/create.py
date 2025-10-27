@@ -2,7 +2,7 @@ import os
 import boto3
 import logging
 import dotenv
-from global_scripts.utils import create_bucket, create_sub_bucket
+from global_scripts.utils import *
 
 dotenv.load_dotenv(dotenv.find_dotenv())
 
@@ -15,23 +15,12 @@ logging.basicConfig(
 def main():
 
     # MinIO client connection, using Amazon S3 API and boto3 Python library
-    try:
-        s3_client = boto3.client(
-            "s3",
-            endpoint_url=os.getenv("ENDPOINT_URL"),
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        )
-        logging.info("Connected to MinIO.")
+    s3_client = minio_init()
 
-        # Create the bucket and the sub-buckets
-        create_bucket(s3_client, os.getenv("LANDING_ZONE_BUCKET"))
-        create_sub_bucket(s3_client, os.getenv("LANDING_ZONE_BUCKET"), os.getenv("TEMPORAL_SUB_BUCKET"))
-        create_sub_bucket(s3_client, os.getenv("LANDING_ZONE_BUCKET"), os.getenv("PERSISTENT_SUB_BUCKET"))
-
-    except Exception:
-        logging.exception("Error connecting to MinIO.")
-        return
+    # Create the bucket and the sub-buckets
+    create_bucket(s3_client, os.getenv("LANDING_ZONE_BUCKET"))
+    create_sub_bucket(s3_client, os.getenv("LANDING_ZONE_BUCKET"), os.getenv("TEMPORAL_SUB_BUCKET"))
+    create_sub_bucket(s3_client, os.getenv("LANDING_ZONE_BUCKET"), os.getenv("PERSISTENT_SUB_BUCKET"))
     
 
 

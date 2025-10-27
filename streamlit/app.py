@@ -106,8 +106,9 @@ def main():
                 tail_text += "\nNote: The first run may take longer due to model loading."
 
             log_placeholder.code(tail_text, language="python")
-            if "error" in line.lower():
+            if "[error]" in line.lower():
                 time.sleep(10)
+                return
 
             time.sleep(0.02)
 

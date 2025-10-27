@@ -122,7 +122,7 @@ def process_videos(s3_client, formatted_zone_prefix, trusted_zone_prefix):
                     logging.info(f"Successfully processed and uploaded: {new_key}")
                 
                 except ffmpeg.Error as e:
-                    logging.warning(f"Failed to process video {key}. File is corrupted. Skipping. Error: {e}")
+                    logging.warning(f"Failed to process video {key}. File is corrupted. Skipping. {e}")
                 except ClientError as e:
                     logging.error(f"Boto3 error processing video {key}: {e}")
                 except Exception as e:
