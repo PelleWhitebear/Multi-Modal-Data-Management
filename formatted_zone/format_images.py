@@ -1,9 +1,8 @@
-import sys
 import io
-import boto3
 import logging
 from PIL import Image
 from botocore.exceptions import ClientError
+from global_scripts.utils import minio_init
 import dotenv
 import os
 
@@ -15,8 +14,13 @@ logging.basicConfig(
     force=True  # override any existing config
 )
 
-
 def delete_images_from_formatted(s3_client):
+    """
+    Deletes all objects in the formatted zone image sub-bucket.
+
+    :param s3_client: Boto3 S3 client
+    :return: True if deletion was successful, False otherwise
+    """
     logging.info(f"Preparing to delete all objects in sub-bucket {os.getenv('FORMATTED_ZONE_BUCKET')}/{os.getenv('MEDIA_SUB_BUCKET')}/image")
     prefix_images = f"{os.getenv('MEDIA_SUB_BUCKET')}/image/"
     try:
@@ -47,6 +51,12 @@ def delete_images_from_formatted(s3_client):
 
 
 def format_image(s3_client, img_name):
+    """
+    Convert image to target format and upload to formatted zone.
+    
+    :param s3_client: MinIO S3 client
+    :param img_name: Name of the image to be converted
+    """
     try:
         # download img to memory
         resp = s3_client.get_object(
@@ -100,39 +110,27 @@ def move_to_formatted_zone(s3_client, img_name):
 
 def main():
     # MinIO client connection, using Amazon S3 API and boto3 Python library
-    try:
-        s3_client = boto3.client(
-            "s3",
-            endpoint_url=os.getenv("ENDPOINT_URL"),
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        )
-        logging.info("Connected to MinIO.")
+    s3_client = minio_init()
         
-        # delete images in the formatted zone to update them
-        success = delete_images_from_formatted(s3_client)
-        if success:
-            # retrieve images from landing zone
-            objects = s3_client.list_objects_v2(Bucket=os.getenv("LANDING_ZONE_BUCKET"), Prefix=f"{os.getenv('PERSISTENT_SUB_BUCKET')}/media/image/")
-            if not 'Contents' in objects or not objects['Contents']:
-                logging.error('There are no images in the persistent zone.')
+    # delete images in the formatted zone to update them
+    success = delete_images_from_formatted(s3_client)
+    if success:
+        # retrieve images from landing zone
+        objects = s3_client.list_objects_v2(Bucket=os.getenv("LANDING_ZONE_BUCKET"), Prefix=f"{os.getenv('PERSISTENT_SUB_BUCKET')}/media/image/")
+        if not 'Contents' in objects or not objects['Contents']:
+            logging.error('There are no images in the persistent zone.')
 
-            logging.info("Starting image format transformation...")
-            for img in objects['Contents']:
-                name_img = img['Key']
-                format_img = name_img.split('.')[-1].lower()
-                # if the image format is different from JPG, is formatted and moved to formatted zone
-                if format_img != os.getenv("TARGET_IMG_FORMAT"):
-                    format_image(s3_client, name_img)
-                # otherwise, it is moved directly to the formatted zone
-                else:
-                    move_to_formatted_zone(s3_client, name_img)
-            logging.info('Image formatting completed.')
-
-    except Exception as e:
-        logging.error(f"Error connecting to MinIO: {e}")
-        return
-
+        logging.info("Starting image format transformation...")
+        for img in objects['Contents']:
+            name_img = img['Key']
+            format_img = name_img.split('.')[-1].lower()
+            # if the image format is different from JPG, is formatted and moved to formatted zone
+            if format_img != os.getenv("TARGET_IMG_FORMAT"):
+                format_image(s3_client, name_img)
+            # otherwise, it is moved directly to the formatted zone
+            else:
+                move_to_formatted_zone(s3_client, name_img)
+        logging.info('Image formatting completed.')
 
 if __name__ == '__main__':
     logging.info(f'Starting images formatting.')

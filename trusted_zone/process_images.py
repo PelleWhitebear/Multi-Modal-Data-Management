@@ -1,10 +1,11 @@
 import logging
-import boto3
 from botocore.exceptions import ClientError
 from io import BytesIO
 from PIL import Image, ImageOps
 import dotenv
 import os
+from global_scripts.utils import minio_init, delete_items
+
 
 dotenv.load_dotenv(dotenv.find_dotenv())
 
@@ -13,40 +14,16 @@ logging.basicConfig(
     format='%(asctime)s - [%(levelname)s] - %(message)s',
     force=True
 )
-
-
-def delete_images(s3_client):
-    bucket = os.getenv('TRUSTED_ZONE_BUCKET')
-    prefix = "media/image/"
-    logging.info(f"Preparing to delete all objects in sub-bucket {bucket}/{prefix}")
-    try:
-        # list objects to delete
-        objects_to_delete = s3_client.list_objects_v2(Bucket=os.getenv('TRUSTED_ZONE_BUCKET'), Prefix=prefix)
-        if 'Contents' not in objects_to_delete:
-            logging.warning(f"No objects found with prefix '{prefix}'. Nothing to delete.")
-            return True
-        delete_keys = {'Objects': [{'Key': obj['Key']} for obj in objects_to_delete['Contents']]}
-
-        # delete them
-        response = s3_client.delete_objects(Bucket=bucket, Delete=delete_keys)
-
-        if 'Errors' in response:
-            logging.error("An error occurred during bulk delete.")
-            for error in response['Errors']:
-                logging.error(f" - Could not delete '{error['Key']}': {error['Message']}")
-            return False
-
-        logging.info(f"Successfully deleted {len(delete_keys['Objects'])} objects from '{prefix}'.")
-        return True
-    except ClientError as e:
-        logging.error(f"A Boto3 client error occurred: {e}")
-        return False
-    except Exception as e:
-        logging.error(f"An unexpected error occurred: {e}")
-        return False
     
 
 def process_images(s3_client, formatted_zone_prefix, trusted_zone_prefix):
+    """
+    Processes images from the formatted zone and uploads them to the trusted zone.
+    
+    :param s3_client: Boto3 S3 client
+    :param formatted_zone_prefix: Prefix for the formatted zone
+    :param trusted_zone_prefix: Prefix for the trusted zone
+    """
     try:
         # List objects in the formatted zone
         objects = s3_client.list_objects_v2(Bucket=os.getenv("FORMATTED_ZONE_BUCKET"), Prefix=formatted_zone_prefix)
@@ -100,25 +77,15 @@ def process_images(s3_client, formatted_zone_prefix, trusted_zone_prefix):
 
 
 def main():
-    try:
-        s3_client = boto3.client(
-            "s3",
-            endpoint_url=os.getenv("ENDPOINT_URL"),
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        )
-        delete_images(s3_client)
-        logging.info("Connected to MinIO.")
-        process_images(
-            s3_client,
-            formatted_zone_prefix="media/image/",
-            trusted_zone_prefix="media/image/"
-        )
-        logging.info("Image processing completed.")
-    except ClientError as e:
-        logging.error(f"A Boto3 error occurred: {e}", exc_info=True)
-    except Exception as e:
-        logging.error(f"An unexpected error occurred in main: {e}", exc_info=True)
 
+    s3_client = minio_init()
+    delete_items(s3_client, bucket=os.getenv("TRUSTED_ZONE_BUCKET"), prefix="media/image/")
+    process_images(
+        s3_client,
+        formatted_zone_prefix="media/image/",
+        trusted_zone_prefix="media/image/"
+    )
+    logging.info("Image processing completed.")
+    
 if __name__ == "__main__":
     main()
