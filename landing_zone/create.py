@@ -1,8 +1,7 @@
 import os
-import boto3
 import logging
 import dotenv
-from global_scripts.utils import *
+from global_scripts.utils import minio_init, create_bucket, create_sub_bucket
 
 dotenv.load_dotenv(dotenv.find_dotenv())
 
@@ -22,7 +21,6 @@ def main():
     create_sub_bucket(s3_client, os.getenv("LANDING_ZONE_BUCKET"), os.getenv("TEMPORAL_SUB_BUCKET"))
     create_sub_bucket(s3_client, os.getenv("LANDING_ZONE_BUCKET"), os.getenv("PERSISTENT_SUB_BUCKET"))
     
-
 
 if __name__ == "__main__":
     main()

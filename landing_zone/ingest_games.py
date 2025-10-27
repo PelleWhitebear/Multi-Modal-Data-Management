@@ -32,7 +32,6 @@ import boto3
 import json
 import io
 from global_scripts.utils import ingest_data
-
 import dotenv
 
 dotenv.load_dotenv(dotenv.find_dotenv())

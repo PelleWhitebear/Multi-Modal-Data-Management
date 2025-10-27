@@ -1,10 +1,10 @@
 import json
-import boto3
 import logging
 from botocore.exceptions import ClientError
 import dotenv
 import os
 import numbers
+from global_scripts.utils import minio_init
 
 dotenv.load_dotenv(dotenv.find_dotenv())
 
@@ -44,6 +44,15 @@ EXPECTED_DICT_FIELDS_STEAMSPY = ["tags"]
 
 
 def validate_and_clean_entry(game_id, game_data, required_keys, dataset_name):
+    """
+    Validates and cleans a single game entry.
+
+    :param game_id: The ID of the game
+    :param game_data: The dictionary containing game data
+    :param required_keys: List of required keys for validation
+    :param dataset_name: Name of the dataset (e.g., "Steam" or "SteamSpy")
+    :return: Cleaned game data dictionary if valid, else None
+    """
     missing_keys = [key for key in required_keys if key not in game_data]
     if missing_keys:
         logging.warning(f"[{dataset_name} ID: {game_id}] Missing required keys: {missing_keys}. Skipping entry.")
@@ -114,6 +123,16 @@ def validate_and_clean_entry(game_id, game_data, required_keys, dataset_name):
 
 
 def process_json_trusted(s3_client, formatted_zone_path, trusted_zone_path, required_keys, dataset_name):
+    """
+    Processes JSON files from the formatted zone, validates and cleans the data,
+    and uploads the cleaned data to the trusted zone.
+    
+    :param s3_client: Boto3 S3 client
+    :param formatted_zone_path: Prefix for the formatted zone
+    :param trusted_zone_path: Prefix for the trusted zone
+    :param required_keys: List of required keys for validation
+    :param dataset_name: Name of the dataset (e.g., "Steam" or "SteamSpy")
+    """
     processed_data = {}
     invalid_entry_count = 0
     total_entries_read = 0
@@ -191,41 +210,29 @@ def process_json_trusted(s3_client, formatted_zone_path, trusted_zone_path, requ
 
 
 def main():
-    try:
-        s3_client = boto3.client(
-            "s3",
-            endpoint_url=os.getenv("ENDPOINT_URL"),
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        )
-        logging.info("Connected to MinIO.")
+    s3_client = minio_init()
 
-        # process Steam API JSON files
-        logging.info("Starting Steam JSON Processing...")
-        process_json_trusted(
-            s3_client,
-            formatted_zone_path="json/steam/", 
-            trusted_zone_path="json/steam/", 
-            required_keys=STEAM_REQUIRED_KEYS,
-            dataset_name="Steam"
-        )
+    # process Steam API JSON files
+    logging.info("Starting Steam JSON Processing...")
+    process_json_trusted(
+        s3_client,
+        formatted_zone_path="json/steam/", 
+        trusted_zone_path="json/steam/", 
+        required_keys=STEAM_REQUIRED_KEYS,
+        dataset_name="Steam"
+    )
 
-        # process SteamSpy API JSON files
-        logging.info("Starting SteamSpy JSON Processing...")
-        process_json_trusted(
-            s3_client,
-            formatted_zone_path="json/steamspy/",
-            trusted_zone_path="json/steamspy/",
-            required_keys=STEAMSPY_REQUIRED_KEYS,
-            dataset_name="SteamSpy"
-        )
+    # process SteamSpy API JSON files
+    logging.info("Starting SteamSpy JSON Processing...")
+    process_json_trusted(
+        s3_client,
+        formatted_zone_path="json/steamspy/",
+        trusted_zone_path="json/steamspy/",
+        required_keys=STEAMSPY_REQUIRED_KEYS,
+        dataset_name="SteamSpy"
+    )
 
-        logging.info("JSON Processing Completed")
-
-    except ClientError as e:
-        logging.error(f"A Boto3 error occurred in main: {e}", exc_info=True)
-    except Exception as e:
-        logging.error(f"An unexpected error occurred in main: {e}", exc_info=True)
+    logging.info("JSON Processing Completed")
 
 
 if __name__ == "__main__":

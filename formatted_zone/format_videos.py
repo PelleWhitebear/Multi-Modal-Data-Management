@@ -1,12 +1,10 @@
-import sys
 import os
-import boto3
 import logging
 import tempfile
 from moviepy.editor import VideoFileClip
 from botocore.exceptions import ClientError
 import dotenv
-import os
+from global_scripts.utils import minio_init
 
 dotenv.load_dotenv(dotenv.find_dotenv())
 
@@ -16,8 +14,13 @@ logging.basicConfig(
     force=True  # override any existing config
 )
 
-
 def delete_videos_from_formatted(s3_client):
+    """
+    Deletes all objects in the formatted zone video sub-bucket.
+
+    :param s3_client: Boto3 S3 client
+    :return: True if deletion was successful, False otherwise
+    """
     logging.info(f"Preparing to delete all objects in sub-bucket {os.getenv('FORMATTED_ZONE_BUCKET')}/{os.getenv('MEDIA_SUB_BUCKET')}/video")
     prefix_videos = f"{os.getenv('MEDIA_SUB_BUCKET')}/video/"
     try:
@@ -48,6 +51,13 @@ def delete_videos_from_formatted(s3_client):
 
 
 def format_video(s3_client, video_name):
+    """
+    Formats a video file from the landing zone and uploads it to the formatted zone.
+
+    :param s3_client: Boto3 S3 client
+    :param video_name: The S3 key of the video file in the landing zone
+    :return: True if formatting and upload were successful, False otherwise
+    """
     input_video_file = tempfile.NamedTemporaryFile(delete=False, suffix=".tmp")
     output_video_file = tempfile.NamedTemporaryFile(delete=False, suffix=f".{os.getenv('TARGET_VIDEO_FORMAT')}")
 
@@ -88,6 +98,13 @@ def format_video(s3_client, video_name):
 
 
 def move_to_formatted_zone(s3_client, video_name):
+    """
+    Moves a video file to the formatted zone.
+    
+    :param s3_client: Boto3 S3 client
+    :param video_name: The S3 key of the video file in the landing zone
+    :return: True if the move was successful, False otherwise
+    """
     try:
         base_name = video_name.split('/')[-1]
         new_key = f"{os.getenv('MEDIA_SUB_BUCKET')}/video/{base_name}"
@@ -114,18 +131,12 @@ def move_to_formatted_zone(s3_client, video_name):
 
 def main():
     # MinIO client connection, using Amazon S3 API and boto3 Python library
-    try:
-        s3_client = boto3.client(
-            "s3",
-            endpoint_url=os.getenv("ENDPOINT_URL"),
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        )
-        logging.info("Connected to MinIO.")
-        
-        # delete videos in the formatted zone to update them
-        success = delete_videos_from_formatted(s3_client)
-        if success:
+    s3_client = minio_init()
+
+    # delete videos in the formatted zone to update them
+    success = delete_videos_from_formatted(s3_client)
+    if success:
+        try:
             # retrieve videos from landing zone
             objects = s3_client.list_objects_v2(Bucket=os.getenv("LANDING_ZONE_BUCKET"), Prefix=f"{os.getenv('PERSISTENT_SUB_BUCKET')}/media/video/")
             if not 'Contents' in objects or not objects['Contents']:
@@ -142,10 +153,9 @@ def main():
                 else:
                     move_to_formatted_zone(s3_client, vid_name)
             logging.info('Video formatting completed.')
-
-    except Exception as e:
-        logging.error(f"Error connecting to MinIO: {e}")
-        return
+        except Exception:
+            logging.exception(f"Error formatting videos.")
+            return
 
 
 if __name__ == '__main__':

@@ -1,16 +1,13 @@
-import boto3
 import logging
-import sys
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import requests
-import json
 import urllib3
 from tqdm import tqdm
 import io
 import dotenv
-from global_scripts.utils import ingest_data
+from global_scripts.utils import minio_init, ingest_data, load_games_from_minio
 
 dotenv.load_dotenv(dotenv.find_dotenv())
 
@@ -38,12 +35,12 @@ def upload_file(s3_client, url, key):
             if int(response.headers.get("Content-Length", 0)) == 0:
                 logging.warning(f"Skipping empty response from {url}")
                 return False
-            # Exception handling is done inside ingest_data
             key = f"{os.getenv('TEMPORAL_SUB_BUCKET')}/{key}"
             fileobj = io.BytesIO(response.content)
             return ingest_data(s3_client, os.getenv('LANDING_ZONE_BUCKET'), fileobj, key)
 
 
+        # Exponential backoff for retries
         except (requests.RequestException, urllib3.exceptions.ReadTimeoutError) as e:
             logging.warning(f"Attempt {attempt} failed: {e}")
             timeout *= 2
@@ -63,7 +60,6 @@ def upload_concurrently(s3_client, media):
 
     :param s3_client: The S3 client connection
     :param media: Dictionary with media URLs
-    :return: True if no errors occurred, else False
     """
     try:
         # Upload each file concurrently
@@ -96,7 +92,7 @@ def upload_concurrently(s3_client, media):
 
 def get_media_urls(s3_client):
     """
-    Gets `steam_games.json` from the landing zone bucket, extracts 5 image URLs and 1 video URL. 
+    Gets steam_games.json from the landing zone bucket, extracts 5 image URLs and 1 video URL. 
     Returns a dictionary with the results.
 
     :param s3_client: The S3 client connection
@@ -105,13 +101,12 @@ def get_media_urls(s3_client):
     media = {}
 
     try:
-        s3_response = s3_client.get_object(Bucket=os.getenv("LANDING_ZONE_BUCKET"), Key=f"{os.getenv('TEMPORAL_SUB_BUCKET')}/steam_games.json")
-        games = json.loads(s3_response["Body"].read().decode("utf-8"))
+        games = load_games_from_minio(s3_client, os.getenv("LANDING_ZONE_BUCKET"), os.getenv("TEMPORAL_SUB_BUCKET"), "steam_games.json")
         images = 0
         videos = 0
-        count = 0
+
         for game_id, game_info in games.items():
-            count += 1
+            # Python supports [:5] even if there are less than 5 items in the list.
             new_images = game_info.get("screenshots", [])[:5]
             new_videos = game_info.get("movies", None)[0] if game_info.get("movies", None) else None
 
@@ -124,7 +119,6 @@ def get_media_urls(s3_client):
             videos += 1 if new_videos else 0
 
             media[game_id] = {
-                # Python supports [:5] even if there are less than 5 items in the list.
                 "images": new_images,
                 "video": new_videos
             }
@@ -142,29 +136,14 @@ def get_media_urls(s3_client):
 def main():
 
     # MinIO client connection, using Amazon S3 API and boto3 Python library
-    try:
-        s3_client = boto3.client(
-            "s3",
-            endpoint_url=os.getenv("ENDPOINT_URL"),
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        )
-        logging.info("Connected to MinIO.")
+    s3_client = minio_init()
 
-        try:
-            media = get_media_urls(s3_client)
+    # Get media URLs from steam_games.json
+    media = get_media_urls(s3_client)
             
-            if media:
-                upload_concurrently(s3_client, media)
-
-        except Exception as e:
-            logging.error(f"Error during data ingestion: {e}")
-            return
-
-    except Exception as e:
-        logging.error(f"Error connecting to MinIO: {e}")
-        return
-    
+    # Upload media files concurrently        
+    if media:
+        upload_concurrently(s3_client, media)
 
 if __name__ == "__main__":
     main()

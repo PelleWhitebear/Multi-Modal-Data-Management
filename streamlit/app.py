@@ -325,6 +325,7 @@ def main():
                                     vid_data = s3_client.get_object(Bucket=os.getenv("EXPLOITATION_ZONE_BUCKET"), Key=vid_obj["Key"])
                                     videos.append((games[video_id]["name"], video_distance, vid_data["Body"].read()))
                                     break
+            st.write(res)
             # Display results
             if texts:
                 st.subheader("Text Results")
@@ -338,8 +339,8 @@ def main():
             if images:
                 st.subheader("Image Results")
                 cols = st.columns(4)
-                for image_name, dist, img_bytes in images:
-                    with cols[ images.index((image_name, dist, img_bytes)) % 4 ]:
+                for i, (image_name, dist, img_bytes) in enumerate(images):
+                    with cols[i % 4]:
                         st.markdown(f"**Name:** {image_name}")
                         st.markdown(f"**Similarity:** {(1-dist)*100:.2f}%")
                         st.image(img_bytes)

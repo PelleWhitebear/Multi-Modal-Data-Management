@@ -6,6 +6,50 @@ class FilteredGame(BaseModel):
     is_relevant: bool = Field(description="A boolean value (`true` or `false`) indicating if the game is relevant.")
     reasoning: str = Field(description="A brief, one-sentence explanation for the relevance decision.")
 
+create_description_prompt = """
+You are an expert at creating high-quality, neutral, factual game descriptions optimized for semantic search and similarity retrieval. 
+Your task is to generate a single coherent paragraph summarizing a video game based only on the input data. 
+Do not infer gameplay mechanics or make up release/platform information. 
+Every word should be meaningful, punctuation optimized, and the paragraph suitable for embedding-based similarity searches.
+
+Inputs:
+- Name: {name}
+- Detailed description: {detailed_description}
+- Short description: {short_description}
+- Genres: {genres}
+- About the game: {about_the_game}
+
+Instructions:
+1. Use {detailed_description} and {short_description} to summarize the game.
+2. Ignore content that is an advertisement, such as DLC promotions, server's status... Focus only on the game itself.
+3. Incorporate {genres} naturally into the paragraph.
+4. Expand keywords semantically: for example, if the genre is "football", include related terms like "soccer, ball, sports, team game".
+5. Do not invent gameplay details; only derive keywords from the input data.
+6. Keep the tone neutral and factual. Do not use promotional language. Be as impartial as possible.
+7. Output a single paragraph, with clear punctuation and optimized structure for semantic retrieval.
+8. Based on the information provided, pack the description with relevant keywords without.
+
+Example:
+
+Inputs:
+- Name: NBA 2017
+- Detailed description: "Buy the latest DLC and get exclusive courts and player skins!"
+- Short description: "Experience realistic basketball gameplay. We are trying to reach the sky with this new game! This is the best game ever!"
+- Genres: ["Sports", "Basketball"]
+- About the game: "NBA 2017 is a basketball simulation game featuring NBA teams and players."
+
+Output paragraph:
+"NBA 2017 is a basketball simulation game that lets players experience realistic sports action with NBA teams and professional players. The game features multiplayer gameplay, strategy, and competitive basketball elements. Genres include basketball, sports, and team game. Every aspect focuses on authentic basketball experience."
+
+Now, generate a single paragraph description for the following game:
+
+- Name: {name}
+- Detailed description: {detailed_description}
+- Short description: {short_description}
+- Genres: {genres}
+- About the game: {about_the_game}
+"""
+
 hyde_prompt = """
 You are an expert video game analyst and a creative writer for a game development studio.
 Your mission is to translate a user's query for a game recommendation into a hypothetical, yet plausible, video game description.

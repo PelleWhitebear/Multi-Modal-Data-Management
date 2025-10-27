@@ -1,6 +1,4 @@
-import sys
 import os
-import boto3
 import logging
 import json
 import csv
@@ -9,7 +7,7 @@ import xmltodict
 import yaml
 from botocore.exceptions import ClientError
 import dotenv
-import os
+from global_scripts.utils import minio_init
 
 dotenv.load_dotenv(dotenv.find_dotenv())
 
@@ -21,6 +19,14 @@ logging.basicConfig(
 
 
 def is_empty(s3_client, bucket_name, folder_prefix):
+    """
+    Checks if a folder in S3 is empty.
+
+    :param s3_client: Boto3 S3 client
+    :param bucket_name: Name of the S3 bucket
+    :param folder_prefix: Prefix for the folder to check
+    :return: True if the folder is empty, False otherwise
+    """
     try:
         objects = s3_client.list_objects_v2(
             Bucket=bucket_name,
@@ -50,6 +56,12 @@ def is_empty(s3_client, bucket_name, folder_prefix):
 
 
 def handle_csv(file_content_string):
+    """
+    Handles CSV file content and converts it to a list of dictionaries.
+
+    :param file_content_string: The content of the CSV file as a string
+    :return: A list of dictionaries representing the CSV rows
+    """
     try:
         reader = csv.DictReader(io.StringIO(file_content_string))
         return list(reader)
@@ -59,6 +71,12 @@ def handle_csv(file_content_string):
 
 
 def handle_xml(file_content_bytes):
+    """
+    Handles XML file content and converts it to a Python dictionary.
+
+    :param file_content_bytes: The content of the XML file as bytes
+    :return: A dictionary representing the XML structure
+    """
     try:
         return xmltodict.parse(file_content_bytes)
     except Exception as e:
@@ -67,6 +85,12 @@ def handle_xml(file_content_bytes):
 
 
 def handle_yaml(file_content_bytes):
+    """
+    Handles YAML file content and converts it to a Python dictionary.
+
+    :param file_content_bytes: The content of the YAML file as bytes
+    :return: A dictionary representing the YAML structure
+    """
     try:
         return yaml.safe_load(file_content_bytes)
     except Exception as e:
@@ -75,6 +99,14 @@ def handle_yaml(file_content_bytes):
 
 
 def format_to_json(s3_client, source_key, type_folder):
+    """
+    Formats a file from CSV, XML, or YAML to JSON and uploads it to the formatted zone.
+
+    :param s3_client: Boto3 S3 client
+    :param source_key: The S3 key of the source file in the landing zone
+    :param type_folder: The sub-folder in the JSON sub-bucket (e.g., 'steam' or 'steamspy')
+    :return: True if formatting and upload were successful, False otherwise
+    """
     try:
         # get object content from landing zone
         obj = s3_client.get_object(Bucket=os.getenv("LANDING_ZONE_BUCKET"), Key=source_key)
@@ -123,6 +155,14 @@ def format_to_json(s3_client, source_key, type_folder):
 
 
 def move_to_formatted_zone(s3_client, key, type):
+    """
+    Moves a file to the formatted zone.
+
+    :param s3_client: Boto3 S3 client
+    :param key: The S3 key of the source file in the landing zone
+    :param type: The sub-folder in the JSON sub-bucket (e.g., 'steam' or 'steamspy')
+    :return: True if the move was successful, False otherwise
+    """
     try:
         base_name = key.split('/')[-1]
         new_key = f"{os.getenv('JSON_SUB_BUCKET')}/{type}/{base_name}"
@@ -148,6 +188,13 @@ def move_to_formatted_zone(s3_client, key, type):
 
 
 def format_json_objects(s3_client, objects, type):
+    """
+    Formats JSON-related objects from the landing zone to the formatted zone.
+    
+    :param s3_client: Boto3 S3 client
+    :param objects: List of objects from the landing zone
+    :param type: The sub-folder in the JSON sub-bucket (e.g., 'steam' or 'steamspy')
+    """
     if not 'Contents' in objects or not objects['Contents']:
         logging.error(f'No {type} files found.')
         return
@@ -200,16 +247,9 @@ def format_json_objects(s3_client, objects, type):
 
 
 def main():
-     # MinIO client connection, using Amazon S3 API and boto3 Python library
+    # MinIO client connection, using Amazon S3 API and boto3 Python library
+    s3_client = minio_init()
     try:
-        s3_client = boto3.client(
-            "s3",
-            endpoint_url=os.getenv("ENDPOINT_URL"),
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        )
-        logging.info("Connected to MinIO.")
-
         # retrieve steam and steamspy objects and format them
         logging.info('Formatting started...')
         json_path = f"{os.getenv('PERSISTENT_SUB_BUCKET')}/json/"
@@ -220,9 +260,6 @@ def main():
         format_json_objects(s3_client, steamspy_objects, 'steamspy')
         logging.info('Formatting completed.')
 
-    except ClientError as e:
-        logging.critical(f"A Boto3 error occurred: {e}", exc_info=True)
-        return
     except Exception as e:
         logging.critical(f"An unexpected error occurred in main: {e}", exc_info=True)
         return

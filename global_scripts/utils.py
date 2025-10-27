@@ -154,7 +154,7 @@ def load_games_from_minio(s3_client, bucket, prefix, suffix):
             return {}
         
         for obj in objs["Contents"]:
-            if obj["Key"].endswith("enhanced_games.json"):
+            if obj["Key"].endswith(suffix):
                 game_obj = s3_client.get_object(Bucket=bucket, Key=obj["Key"])
                 games = json.loads(game_obj["Body"].read().decode("utf-8"))
                 return games
@@ -213,32 +213,6 @@ def create_sub_bucket(s3_client, bucket, key):
             return False
     except Exception:
         logging.exception(f"Unexpected error creating sub-bucket '{key}'.")
-        return False
-    return True
-
-def delete_bucket_elements(s3_client, bucket):
-    """
-    Delete all objects inside a bucket.
-
-    :param s3_client: The S3 client connection
-    :param bucket: The bucket to delete contents from
-    :return: True if deletion succeeded, else False
-    """
-    try:
-        logging.info(f"Deleting contents of bucket: {bucket['Name']}.")
-        objects = s3_client.list_objects_v2(Bucket=bucket['Name'])
-        if "Contents" in objects:
-            s3_client.delete_objects(
-                Bucket=bucket['Name'],
-                Delete={
-                    'Objects': [{'Key': obj['Key']} for obj in objects['Contents']],
-                    'Quiet': True
-                })
-            logging.info(f"  Deleted objects.")
-        else:
-            logging.info(f"  No objects found in bucket: {bucket['Name']}.")
-    except Exception:
-        logging.exception(f"Unexpected error deleting contents of bucket '{bucket['Name']}'.")
         return False
     return True
 
@@ -354,28 +328,37 @@ def move_to_persistent(s3_client, bucket, temporal_sub_bucket, persistent_sub_bu
         except Exception as e:
             logging.error(e)
 
-def setup_logging(log_filename: str, level=logging.INFO, filemode='w'):
+def delete_items(s3_client, bucket, prefix=""):
     """
-    Sets up logging with a file in landing_zone/logs/.
-    Ensures the logs directory exists.
-
-    Parameters:
-        :param log_filename (str): Name of the log file, e.g., 'delete.log'.
-        :param level (int, optional): Logging level, default is logging.INFO.
-        :param filemode (str, optional): 'w' to overwrite or 'a' to append, default is 'w'.
+    Deletes all objects in the specified S3 bucket and prefix.
+    :param s3_client: Boto3 S3 client
+    :param bucket: The S3 bucket name
+    :param prefix: The prefix path inside the bucket
+    :return: True if deletion was successful, False otherwise
     """
-    # Ensure logs directory exists
-    log_dir = os.path.join(os.path.dirname(__file__), '..', 'logs')
-    os.makedirs(log_dir, exist_ok=True)
+    logging.info(f"Preparing to delete all objects in sub-bucket {bucket}/{prefix}")
+    try:
+        # list objects to delete
+        objects_to_delete = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
+        if 'Contents' not in objects_to_delete:
+            logging.warning(f"No objects found with prefix '{prefix}'. Nothing to delete.")
+            return True
+        delete_keys = {'Objects': [{'Key': obj['Key']} for obj in objects_to_delete['Contents']]}
 
-    # Full path to log file
-    log_file = os.path.join(log_dir, log_filename)
+        # delete them
+        response = s3_client.delete_objects(Bucket=bucket, Delete=delete_keys)
 
-    # Configure logging
-    logging.basicConfig(
-        level=level,
-        format='%(asctime)s - [%(levelname)s] - %(message)s',
-        # filename=log_file,
-        # filemode=filemode,
-        force=True  # override any existing config
-    )
+        if 'Errors' in response:
+            logging.error("An error occurred during bulk delete.")
+            for error in response['Errors']:
+                logging.error(f" - Could not delete '{error['Key']}': {error['Message']}")
+            return False
+
+        logging.info(f"Successfully deleted {len(delete_keys['Objects'])} objects from '{prefix}'.")
+        return True
+    except ClientError as e:
+        logging.error(f"A Boto3 client error occurred: {e}")
+        return False
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {e}")
+        return False
