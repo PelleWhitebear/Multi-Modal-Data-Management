@@ -83,8 +83,8 @@ def query_gemini(gemini_client, prompt, config=None):
                 contents=prompt
             )
         return response.text
-    except Exception:
-        logging.exception("Error querying Google Gemini.")
+    except Exception as e:
+        logging.exception(f"Error querying Google Gemini. {e}")
         return
 
 def query_chromadb(chroma_client, query_type, query, collection, k):

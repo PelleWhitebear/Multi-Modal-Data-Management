@@ -26,15 +26,11 @@ services:
   pipeline:
     build: .
     container_name: pipeline
-    dns: 
-    - 8.8.8.8 
     depends_on:
       - minio
       - chroma
     stdin_open: true
     tty: true
-    env_file:
-      - .env
 
   streamlit:
     build: .

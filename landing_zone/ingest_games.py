@@ -28,10 +28,9 @@ import time
 import random
 import logging
 from tqdm import tqdm
-import boto3
 import json
 import io
-from global_scripts.utils import ingest_data
+from global_scripts.utils import minio_init, ingest_data
 import dotenv
 
 dotenv.load_dotenv(dotenv.find_dotenv())
@@ -124,9 +123,11 @@ def SteamRequest(appID, retryTime, successRequestCount, errorRequestCount, retri
   '''
   Request and parse information about a Steam app.
   '''
+  logging.info(f'Starting Steam request for AppID {appID}...')
   url = "http://store.steampowered.com/api/appdetails/"
   response = DoRequest(url, {"appids": appID, "cc": currency, "l": language}, retryTime, successRequestCount, errorRequestCount, retries)
   if response.status_code == 200 and response.text.strip():
+    logging.info(f'Steam request for AppID {appID} completed successfully.')
     try:
       data = response.json()
       app = data[appID]
@@ -153,8 +154,10 @@ def SteamSpyRequest(appID, retryTime, successRequestCount, errorRequestCount, re
   '''
   Request and parse information about a Steam app using SteamSpy.
   '''
+  logging.info(f'Starting SteamSpy request for AppID {appID}...')
   url = f"https://steamspy.com/api.php?request=appdetails&appid={appID}"
   response = DoRequest(url, None, retryTime, successRequestCount, errorRequestCount, retries)
+  logging.info(f'Received response from SteamSpy for AppID {appID}.')
   if response:
     try:
       data = response.json()
@@ -285,7 +288,7 @@ def Scraper(s3_client, steam_dataset, steamspy_dataset, appIDs = VALID_IDS):
   '''
   
   apps = appIDs
-
+  logging.info(f'Starting scrape for {len(apps)} apps.')
   if apps:
     gamesAdded = 0
     gamesDiscarted = 0
@@ -296,6 +299,7 @@ def Scraper(s3_client, steam_dataset, steamspy_dataset, appIDs = VALID_IDS):
     count = 0
 
     for appID in tqdm(apps):
+      logging.info(f'Processing AppID {appID}...')
       if count == 10:
         break
       app = SteamRequest(appID, min(4, float(os.getenv("DEFAULT_SLEEP"))), successRequestCount, errorRequestCount, int(os.getenv("DEFAULT_RETRIES")))
@@ -357,34 +361,23 @@ def main():
   '''
   Main function.
   '''
+  s3_client = minio_init()
+
+  # Preparation for incremental data ingestion
+  steam_dataset = {}
+  steamspy_dataset = {}
+
   try:
-    s3_client = boto3.client(
-        "s3",
-        endpoint_url=os.getenv("ENDPOINT_URL"),
-        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-    )
-    logging.info("Connected to MinIO.")
-
-    # Preparation for incremental data ingestion
-    steam_dataset = {}
-    steamspy_dataset = {}
-
-    try:
-      Scraper(s3_client, steam_dataset, steamspy_dataset, appIDs=VALID_IDS)
-    
-    except (KeyboardInterrupt, SystemExit):
-      UploadJSON(s3_client, steam_dataset, os.getenv("DEFAULT_STEAM_OUTFILE"), int(os.getenv("DEFAULT_AUTOSAVE")) > 0)
-      UploadJSON(s3_client, steamspy_dataset, os.getenv("DEFAULT_STEAMSPY_OUTFILE"), int(os.getenv("DEFAULT_AUTOSAVE")) > 0)
-    except Exception:
-      logging.exception(f"Error during data ingestion.")
-      return
-    
-    logging.info('Done')
-    
+    Scraper(s3_client, steam_dataset, steamspy_dataset, appIDs=VALID_IDS)
+  
+  except (KeyboardInterrupt, SystemExit):
+    UploadJSON(s3_client, steam_dataset, os.getenv("DEFAULT_STEAM_OUTFILE"), int(os.getenv("DEFAULT_AUTOSAVE")) > 0)
+    UploadJSON(s3_client, steamspy_dataset, os.getenv("DEFAULT_STEAMSPY_OUTFILE"), int(os.getenv("DEFAULT_AUTOSAVE")) > 0)
   except Exception:
-      logging.exception(f"Error connecting to MinIO.")
-      return
+    logging.exception(f"Error during data ingestion.")
+    return
+  
+  logging.info('Done')
 
 if __name__ == "__main__":
   main()

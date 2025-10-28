@@ -6,17 +6,15 @@ import subprocess
 from collections import deque
 import logging
 import json
-from collections import defaultdict
 import ast
+import io
 from dotenv import load_dotenv, find_dotenv
 import tempfile
 load_dotenv(find_dotenv())
 
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - [%(levelname)s] - %(message)s',
-                    force=True,
-                    filemode='w',
-                    filename='streamlit.log')  # override any existing config
+                    force=True)  # override any existing config
 
 st.set_page_config(
         page_title="ADSDB Control Panel",
@@ -138,7 +136,6 @@ def main():
 
         chat_container = st.container()
         input_container = st.container()
-
         with chat_container:
             if "messages" not in st.session_state:
                 st.session_state.messages = [
@@ -161,6 +158,7 @@ def main():
             with chat_container:
                 with st.chat_message("assistant"):
                     spinner = st.spinner("Thinking...")
+                    
                     with spinner:
                         rag_proc = subprocess.Popen(
                             ["python", "-m", "similarity_search.rag",
@@ -170,6 +168,7 @@ def main():
                             text=True,
                             bufsize=1
                         )
+                        
                         
                         last_result = ""
                         capturing = False
@@ -322,10 +321,8 @@ def main():
                         for video_id, video_distance in zip(value["id"], value["distance"]):
                             for vid_obj in video_objs["Contents"]:
                                 if vid_obj["Key"].endswith(f"{video_id}#1.mp4"):
-                                    vid_data = s3_client.get_object(Bucket=os.getenv("EXPLOITATION_ZONE_BUCKET"), Key=vid_obj["Key"])
-                                    videos.append((games[video_id]["name"], video_distance, vid_data["Body"].read()))
+                                    videos.append((games[video_id]["name"], video_distance, vid_obj["Key"]))
                                     break
-            st.write(res)
             # Display results
             if texts:
                 st.subheader("Text Results")
@@ -347,12 +344,19 @@ def main():
             st.divider()
             if videos:
                 st.subheader("Video Results")
+                st.write("Since some browsers are not compatible with direct video embedding, download links are provided below.")
                 cols = st.columns(4)
-                for video_name, dist, vid_bytes in videos:
-                    with cols[ videos.index((video_name, dist, vid_bytes)) % 4 ]:
+                for i, (video_name, dist, video_key) in enumerate(videos):
+                    with cols[i % 4]:
                         st.markdown(f"**Name:** {video_name}")
                         st.markdown(f"**Similarity:** {(1-dist)*100:.2f}%")
-                        st.video(vid_bytes)
+                        
+                        presigned_url = s3_client.generate_presigned_url('get_object',
+                                                                        Params={'Bucket': os.getenv("EXPLOITATION_ZONE_BUCKET"),
+                                                                                'Key': video_key},
+                                                                        ExpiresIn=3600)
+                        
+                        st.link_button("Download Video", presigned_url.replace("minio", "localhost"))
     st.divider()
 
     st.caption("ADSDB Data Warehouse Control Panel - Developed by the Confusion Matrix Crew")

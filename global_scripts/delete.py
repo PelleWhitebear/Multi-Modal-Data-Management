@@ -1,9 +1,3 @@
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-
-import boto3
-import os
 import logging
 from dotenv import load_dotenv, find_dotenv
 from global_scripts.utils import *
@@ -26,7 +20,7 @@ def main():
             return
         
         for bucket in buckets:
-            delete_items(s3_client, bucket)
+            delete_items(s3_client, bucket["Name"])
             s3_client.delete_bucket(Bucket=bucket["Name"])
             logging.info(f"Bucket '{bucket['Name']}' deleted.")
 
