@@ -1,0 +1,52 @@
+services:
+  minio:
+    image: quay.io/minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: ROOTNAME
+      MINIO_ROOT_PASSWORD: CHANGEME123
+    command: server /data --console-address ":9001"
+
+  chroma:
+    image: chromadb/chroma
+    container_name: chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma
+
+  # pipeline:
+  #   build: .
+  #   container_name: pipeline
+  #   depends_on:
+  #     - minio
+  #     - chroma
+  #   stdin_open: true
+  #   tty: true
+
+  streamlit:
+    build: .
+    container_name: streamlit
+    depends_on:
+      - chroma
+      - minio
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./:/app
+    environment:
+      - STREAMLIT_SERVER_PORT=8501
+      - PYTHONUNBUFFERED=1
+    command: streamlit run streamlit/app.py --server.port=8501 --server.address=0.0.0.0
+
+volumes:
+  minio_data:
+  chroma_data:

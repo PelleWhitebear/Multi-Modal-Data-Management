@@ -1,0 +1,33 @@
+#!/bin/bash
+set -e
+
+echo "Starting landing zone ingestion process..."
+create_t0=$(date +%s)
+python3 -m landing_zone.create
+create_t1=$(date +%s)
+echo "Buckets and sub-buckets created."
+
+echo "Ingesting game data from Steam and SteamSpy..."
+ingest_games_t0=$(date +%s)
+python3 -m landing_zone.ingest_games
+ingest_games_t1=$(date +%s)
+echo "Game data ingestion completed."
+
+echo "Ingesting media files..."
+ingest_media_t0=$(date +%s)
+python3 -m landing_zone.ingest_media
+ingest_media_t1=$(date +%s)
+echo "Media files ingestion completed."
+
+echo "Moving data to persistent storage..."
+move_to_persistent_t0=$(date +%s)
+python3 -m landing_zone.move_to_persistent
+move_to_persistent_t1=$(date +%s)
+echo "Landing zone ingestion process completed."
+
+elapsed=$(( move_to_persistent_t1 - create_t0 ))
+echo "Time taken for bucket creation: $((create_t1 - create_t0)) seconds."
+echo "Time taken for game data ingestion: $((ingest_games_t1 - ingest_games_t0)) seconds."
+echo "Time taken for media files ingestion: $((ingest_media_t1 - ingest_media_t0)) seconds."
+echo "Time taken for moving data to persistent storage: $((move_to_persistent_t1 - move_to_persistent_t0)) seconds."
+echo "Total time taken: $elapsed seconds."
