@@ -106,7 +106,6 @@ def main():
             log_placeholder.code(tail_text, language="python")
             if "[error]" in line.lower():
                 time.sleep(10)
-                return
 
             time.sleep(0.02)
 
