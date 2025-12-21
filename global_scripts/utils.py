@@ -344,26 +344,37 @@ def delete_items(s3_client, bucket, prefix=""):
     :param prefix: The prefix path inside the bucket
     :return: True if deletion was successful, False otherwise
     """
-    logging.info(f"Preparing to delete all objects in sub-bucket {bucket}/{prefix}")
+    logging.info(f"Preparing to delete all objects in bucket {bucket}")
+    
+    deleted_count = 0
+    
     try:
-        # list objects to delete
-        objects_to_delete = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
-        if 'Contents' not in objects_to_delete:
-            logging.warning(f"No objects found with prefix '{prefix}'. Nothing to delete.")
-            return True
-        delete_keys = {'Objects': [{'Key': obj['Key']} for obj in objects_to_delete['Contents']]}
+        while True:
+            # 1. List the next batch of objects (max 1000)
+            objects_to_delete = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix)
+            
+            # 2. If 'Contents' is missing, the bucket/prefix is empty. We are done.
+            if 'Contents' not in objects_to_delete:
+                break
+            
+            # 3. Prepare the keys for deletion
+            delete_keys = {'Objects': [{'Key': obj['Key']} for obj in objects_to_delete['Contents']]}
+            
+            # 4. Delete this batch
+            response = s3_client.delete_objects(Bucket=bucket, Delete=delete_keys)
+            
+            if 'Errors' in response:
+                logging.error("An error occurred during bulk delete.")
+                for error in response['Errors']:
+                    logging.error(f" - Could not delete '{error['Key']}': {error['Message']}")
+                return False
+            
+            batch_count = len(delete_keys['Objects'])
+            deleted_count += batch_count
 
-        # delete them
-        response = s3_client.delete_objects(Bucket=bucket, Delete=delete_keys)
-
-        if 'Errors' in response:
-            logging.error("An error occurred during bulk delete.")
-            for error in response['Errors']:
-                logging.error(f" - Could not delete '{error['Key']}': {error['Message']}")
-            return False
-
-        logging.info(f"Successfully deleted {len(delete_keys['Objects'])} objects from '{prefix}'.")
+        logging.info(f"Successfully deleted a total of {deleted_count} objects from '{bucket}'.")
         return True
+
     except ClientError as e:
         logging.error(f"A Boto3 client error occurred: {e}")
         return False

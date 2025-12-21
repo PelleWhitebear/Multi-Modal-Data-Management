@@ -32,6 +32,10 @@ services:
   pipeline:
     build: .
     container_name: pipeline
+    volumes:
+      - ./:/app
+    environment:
+      - PYTHONPATH=/app
     depends_on:
       minio:
         condition: service_healthy
