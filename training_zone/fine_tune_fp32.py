@@ -109,7 +109,7 @@ def main():
     val_csv_path = os.path.join(script_dir, "data_splits", "val.csv")
 
     # Create directory to save metadata of trained model
-    run_dir = setup_experiment_dir(base_path=os.path.join(script_dir, 'trained_models/v1'))
+    run_dir = setup_experiment_dir(base_path=os.path.join(script_dir, "trained_models/v1"))
 
     # Load model and processor
     logging.info(f"Loading model {CONFIG['model_id']} on {CONFIG['device']}...")
