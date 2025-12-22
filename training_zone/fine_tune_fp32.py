@@ -39,7 +39,6 @@ CONFIG = {
     "learning_rate": 5e-6,
     "patience": 3, 
     "weight_decay": 0.1,
-    "warmup_steps": 100,
     "device": "cuda" if torch.cuda.is_available() else "cpu"
 }
 

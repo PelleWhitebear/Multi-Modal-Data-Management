@@ -6,6 +6,5 @@
     "learning_rate": 5e-06,
     "patience": 3,
     "weight_decay": 0.1,
-    "warmup_steps": 100,
     "device": "cuda"
 }
