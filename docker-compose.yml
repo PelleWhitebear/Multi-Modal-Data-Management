@@ -44,6 +44,14 @@ services:
 
     stdin_open: true
     tty: true
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1  
+              capabilities: [gpu]
 
   streamlit:
     build: .
