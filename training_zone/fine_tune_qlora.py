@@ -8,7 +8,7 @@ import boto3
 import pandas as pd
 import torch
 from dotenv import find_dotenv, load_dotenv
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from peft import LoraConfig, get_peft_model
 from PIL import Image
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, Dataset
@@ -136,8 +136,9 @@ def main():
     )
     processor = CLIPProcessor.from_pretrained(CONFIG["model_id"])
 
-    # Prepare model for k-bit training (handles gradient checkpointing, layer norms, etc.)
-    model = prepare_model_for_kbit_training(model)
+    # Disable gradients for all base model parameters (LoRA will re-enable for adapters)
+    for param in model.parameters():
+        param.requires_grad = False
 
     # Define LoRA config
     peft_config = LoraConfig(
