@@ -29,7 +29,8 @@ def main(args):
     technique = args.technique.lower()
     logging.info(f"Selected fine-tuning technique: {technique}")
     s3_client = minio_init()
-    CONFIG = setup_config()
+    CONFIG = setup_config(technique)
+    CONFIG["technique"] = technique
 
     # Get train and validation data paths
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -37,7 +38,7 @@ def main(args):
     val_csv_path = os.path.join(script_dir, "data_splits", "val.csv")
 
     # Create directory to save metadata of trained model
-    run_dir = setup_experiment_dir(base_path=os.path.join(script_dir, "trained_models/v1"))
+    run_dir = setup_experiment_dir(CONFIG, base_path=os.path.join(script_dir, "trained_models/v1"))
 
     if technique == "qlora":
         if CONFIG["device"] != "cuda":
@@ -162,7 +163,7 @@ def main(args):
         avg_val_loss = total_val_loss / len(val_loader)
 
         logging.info(
-            f"[Epoch {epoch + 1}/{CONFIG['epochs'] + 1}] Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}"
+            f"[Epoch {epoch + 1}/{CONFIG['epochs']}] Train Loss: {avg_train_loss:.4f} | Val Loss: {avg_val_loss:.4f}"
         )
 
         # Save best model (early stopping)

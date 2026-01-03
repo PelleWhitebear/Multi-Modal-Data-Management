@@ -10,11 +10,11 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 BASE_CONFIG = {
-    "run_name": "fully_finetuned_fp32",
     "model_id": "openai/clip-vit-base-patch32",
-    "epochs": 10,
+    "epochs": 15,
     "batch_size": 32,
-    "learning_rate": 5e-6,
+    #"learning_rate": 5e-6,
+    "learning_rate": 3e-5,
     "patience": 3,
     "weight_decay": 0.1,
     "device": "cuda" if torch.cuda.is_available() else "cpu",
@@ -41,25 +41,24 @@ QUANT_CONFIG = {
 }
 
 
-def setup_config():
-    match BASE_CONFIG["run_name"]:
-        case name if "qlora" in name:
+def setup_config(technique):
+    match technique:
+        case "qlora":
             CONFIG = {**BASE_CONFIG, **LORA_CONFIG, **QUANT_CONFIG}
-        case name if "lora" in name:
+        case "lora":
             CONFIG = {**BASE_CONFIG, **LORA_CONFIG}
         case _:
             CONFIG = BASE_CONFIG
     return CONFIG
 
 
-def setup_experiment_dir(base_path="trained_models/v1"):
+def setup_experiment_dir(CONFIG, base_path="trained_models/v1"):
     """
     Creates a unique folder for this training run and saves the config.
     Structure: trained_models/v1/YYYYMMDD_HHMMSS_run_name/
     """
-    CONFIG = setup_config()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_dir_name = f"{timestamp}_{CONFIG['run_name']}"
+    run_dir_name = f"{timestamp}_{CONFIG['technique']}"
     run_dir = os.path.join(base_path, run_dir_name)
 
     os.makedirs(run_dir, exist_ok=True)
