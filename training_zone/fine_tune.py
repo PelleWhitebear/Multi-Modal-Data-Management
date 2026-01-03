@@ -77,8 +77,8 @@ def main(args):
 
     # Prepare data
     logging.info("Preparing data...")
-    train_dataset = SteamDatasetHF(s3_client, train_csv_path, processor)
-    val_dataset = SteamDatasetHF(s3_client, val_csv_path, processor)
+    train_dataset = SteamDatasetHF(s3_client, train_csv_path, processor, is_train=True)
+    val_dataset = SteamDatasetHF(s3_client, val_csv_path, processor, is_train=False)
 
     train_loader = DataLoader(train_dataset, batch_size=CONFIG["batch_size"], shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=CONFIG["batch_size"], shuffle=False)
