@@ -1,0 +1,108 @@
+import json
+import logging
+import os
+from datetime import datetime
+from io import BytesIO
+
+import pandas as pd
+import torch
+from PIL import Image
+from torch.utils.data import Dataset
+
+BASE_CONFIG = {
+    "run_name": "fully_finetuned_fp32",
+    "model_id": "openai/clip-vit-base-patch32",
+    "epochs": 10,
+    "batch_size": 32,
+    "learning_rate": 5e-6,
+    "patience": 3,
+    "weight_decay": 0.1,
+    "device": "cuda" if torch.cuda.is_available() else "cpu",
+}
+
+LORA_CONFIG = {
+    "lora_r": 4,  # Rank of the LoRA matrices
+    "lora_alpha": 4,  # Alphascaling factor
+    "lora_matrices": [
+        "q_proj",
+        "v_proj",
+    ],  # we can try adding "k_proj", "out_proj" or even MLP layers ("gate_proj", "up_proj")
+    "lora_dropout": 0.1,
+    "device": "cuda" if torch.cuda.is_available() else "cpu",
+}
+
+QUANT_CONFIG = {
+    # Quantization config (4-bit)
+    "load_in_4bit": True,
+    "bnb_4bit_compute_dtype": "float32",  # Computation dtype
+    "bnb_4bit_quant_type": "nf4",  # Quantization type: "nf4" or "fp4"
+    "bnb_4bit_use_double_quant": True,  # Nested quantization for more memory savings
+    "device": "cuda" if torch.cuda.is_available() else "cpu",
+}
+
+
+def setup_config():
+    match BASE_CONFIG["run_name"]:
+        case name if "qlora" in name:
+            CONFIG = {**BASE_CONFIG, **LORA_CONFIG, **QUANT_CONFIG}
+        case name if "lora" in name:
+            CONFIG = {**BASE_CONFIG, **LORA_CONFIG}
+        case _:
+            CONFIG = BASE_CONFIG
+    return CONFIG
+
+
+def setup_experiment_dir(base_path="trained_models/v1"):
+    """
+    Creates a unique folder for this training run and saves the config.
+    Structure: trained_models/v1/YYYYMMDD_HHMMSS_run_name/
+    """
+    CONFIG = setup_config()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_dir_name = f"{timestamp}_{CONFIG['run_name']}"
+    run_dir = os.path.join(base_path, run_dir_name)
+
+    os.makedirs(run_dir, exist_ok=True)
+
+    # Save information about hyperparameters
+    with open(os.path.join(run_dir, "hyperparameters.json"), "w") as f:
+        json.dump(CONFIG, f, indent=4)
+
+    return run_dir
+
+
+class SteamDatasetHF(Dataset):
+    def __init__(self, s3_client, csv_file, processor):
+        self.s3_client = s3_client
+        self.data = pd.read_csv(csv_file)
+        self.processor = processor
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        row = self.data.iloc[idx]
+        image_key = row["image_path"]
+        desc = row["description"]
+
+        # Fetch image
+        try:
+            resp = self.s3_client.get_object(Bucket=os.getenv("TRAINING_ZONE_BUCKET"), Key=image_key)
+            img_data = resp["Body"].read()
+            image = Image.open(BytesIO(img_data)).convert("RGB")
+        except Exception as e:
+            logging.error(f"Error loading {image_key}: {e}")
+            image = Image.new("RGB", (224, 224), color="black")
+
+        # Processor: tokenizer for text + processor for images
+        # - Tokenize text and return token IDs
+        # - Process images and return pixel values (3,224,224)
+        inputs = self.processor(
+            text=[desc], images=image, return_tensors="pt", padding="max_length", truncation=True
+        )
+
+        return {
+            "token_ids": inputs["input_ids"].squeeze(0),
+            "attention_mask": inputs["attention_mask"].squeeze(0),
+            "pixel_values": inputs["pixel_values"].squeeze(0),
+        }
