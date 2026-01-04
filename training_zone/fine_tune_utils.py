@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from datetime import datetime
-from io import BytesIO
+from io import BytesIO, StringIO
 
 import pandas as pd
 import torch
@@ -12,9 +12,9 @@ from torchvision import transforms
 
 BASE_CONFIG = {
     "model_id": "openai/clip-vit-base-patch32",
-    "epochs": 50,
+    "epochs": 10,
     "batch_size": 16,
-    #"learning_rate": 5e-6,
+    # "learning_rate": 5e-6,
     "learning_rate": 3e-5,
     "patience": 5,
     "weight_decay": 0.1,
@@ -72,26 +72,39 @@ def setup_experiment_dir(CONFIG, base_path="trained_models/v1"):
 
 
 class SteamDatasetHF(Dataset):
-    def __init__(self, s3_client, csv_file, processor, is_train=False):
+    def __init__(self, s3_client, csv_data, processor, is_train=False):
+        """
+        :param s3_client: MinIO S3 client
+        :param csv_data: Either a pandas DataFrame or a CSV string/bytes
+        :param processor: CLIP processor
+        :param is_train: Whether to apply training augmentations
+        """
         self.s3_client = s3_client
-        self.data = pd.read_csv(csv_file)
+
+        # Accept DataFrame or CSV content
+        if isinstance(csv_data, pd.DataFrame):
+            self.data = csv_data
+        elif isinstance(csv_data, (str, bytes)):
+            self.data = pd.read_csv(StringIO(csv_data) if isinstance(csv_data, str) else BytesIO(csv_data))
+        else:
+            raise ValueError("csv_data must be a pandas DataFrame, string, or bytes")
+
         self.processor = processor
         self.is_train = is_train
 
         # Define Dynamic Transforms (Run on CPU before CLIP Processor)
-        self.train_transform = transforms.Compose([
-            # Forces model to learn parts of the image, not just the whole
-            transforms.RandomResizedCrop(size=224, scale=(0.8, 1.0)), 
-            
-            # Randomly flip horizontally (Great for most games)
-            transforms.RandomHorizontalFlip(p=0.5),
-            
-            # Randomly change brightness/contrast so model doesn't rely on exact colors
-            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
-            
-            # (Optional) Random rotation if appropriate for your game UI/style
-            transforms.RandomRotation(degrees=15),
-        ])
+        self.train_transform = transforms.Compose(
+            [
+                # Forces model to learn parts of the image, not just the whole
+                transforms.RandomResizedCrop(size=224, scale=(0.8, 1.0)),
+                # Randomly flip horizontally (Great for most games)
+                transforms.RandomHorizontalFlip(p=0.5),
+                # Randomly change brightness/contrast so model doesn't rely on exact colors
+                transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+                # (Optional) Random rotation if appropriate for your game UI/style
+                transforms.RandomRotation(degrees=15),
+            ]
+        )
 
     def __len__(self):
         return len(self.data)

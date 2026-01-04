@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import tempfile
 
 import torch
 from dotenv import find_dotenv, load_dotenv
@@ -13,6 +14,34 @@ from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import BitsAndBytesConfig, CLIPModel, CLIPProcessor
+
+
+def save_model_to_minio(s3_client, model, processor, bucket, minio_path):
+    """
+    Save model and processor to MinIO storage.
+
+    :param s3_client: The S3 client connection
+    :param model: The model to save
+    :param processor: The processor to save
+    :param bucket: The MinIO bucket name
+    :param minio_path: The path inside the bucket where to save the model
+    """
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Save model and processor to temporary directory
+        model.save_pretrained(temp_dir)
+        processor.save_pretrained(temp_dir)
+
+        # Upload all files to MinIO
+        for root, dirs, files in os.walk(temp_dir):
+            for file in files:
+                local_file_path = os.path.join(root, file)
+                relative_path = os.path.relpath(local_file_path, temp_dir)
+                minio_key = f"{minio_path}/{relative_path}".replace("\\", "/")
+
+                with open(local_file_path, "rb") as f:
+                    s3_client.put_object(Bucket=bucket, Key=minio_key, Body=f.read())
+                logging.info(f"Uploaded {relative_path} to {bucket}/{minio_key}")
+
 
 # Load environment
 load_dotenv(find_dotenv())
@@ -32,12 +61,18 @@ def main(args):
     CONFIG = setup_config(technique)
     CONFIG["technique"] = technique
 
-    # Get train and validation data paths
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    train_csv_path = os.path.join(script_dir, "data_splits", "train.csv")
-    val_csv_path = os.path.join(script_dir, "data_splits", "val.csv")
+    # Load train and validation data from MinIO
+    bucket = os.getenv("TRAINING_ZONE_BUCKET", "training-zone")
+    logging.info("Loading training data from MinIO...")
+
+    train_csv_response = s3_client.get_object(Bucket=bucket, Key="data_splits/train.csv")
+    train_csv_data = train_csv_response["Body"].read().decode("utf-8")
+
+    val_csv_response = s3_client.get_object(Bucket=bucket, Key="data_splits/val.csv")
+    val_csv_data = val_csv_response["Body"].read().decode("utf-8")
 
     # Create directory to save metadata of trained model
+    script_dir = os.path.dirname(os.path.abspath(__file__))
     run_dir = setup_experiment_dir(CONFIG, base_path=os.path.join(script_dir, "trained_models/v1"))
 
     if technique == "qlora":
@@ -77,8 +112,8 @@ def main(args):
 
     # Prepare data
     logging.info("Preparing data...")
-    train_dataset = SteamDatasetHF(s3_client, train_csv_path, processor, is_train=True)
-    val_dataset = SteamDatasetHF(s3_client, val_csv_path, processor, is_train=False)
+    train_dataset = SteamDatasetHF(s3_client, train_csv_data, processor, is_train=True)
+    val_dataset = SteamDatasetHF(s3_client, val_csv_data, processor, is_train=False)
 
     train_loader = DataLoader(train_dataset, batch_size=CONFIG["batch_size"], shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=CONFIG["batch_size"], shuffle=False)
@@ -170,11 +205,13 @@ def main(args):
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             patience_counter = 0
-            logging.info(f"New best model found. Saving to {run_dir}/best_model...")
 
-            best_model_path = os.path.join(run_dir, "best_model")
-            model.save_pretrained(best_model_path)
-            processor.save_pretrained(best_model_path)
+            # Save to MinIO storage
+            bucket = os.getenv("TRAINING_ZONE_BUCKET", "training-zone")
+            minio_model_path = f"models/{technique}/{os.path.basename(run_dir)}"
+            logging.info(f"New best model found. Saving to MinIO: {bucket}/{minio_model_path}...")
+
+            save_model_to_minio(s3_client, model, processor, bucket, minio_model_path)
         else:
             patience_counter += 1
             logging.info(f"No improvement. Patience {patience_counter}/{CONFIG['patience']}")
@@ -187,12 +224,11 @@ def main(args):
 
 
 if __name__ == "__main__":
-    # Do argparse here:
     parser = argparse.ArgumentParser(description="Fine-tune CLIP model on multi-modal dataset.")
     parser.add_argument(
         "--technique",
         type=str,
-        choices=["fp32", "fp16", "lora", "qlora"],
+        choices=["baseline", "fp32", "fp16", "lora", "qlora"],
         default="fp32",
         help="Fine-tuning technique to use.",
     )
