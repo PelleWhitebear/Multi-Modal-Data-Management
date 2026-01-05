@@ -1,10 +1,15 @@
-# 1. Load Data (All images and texts)
-# 2. Load models (FP32, FP16, LoRA, QLoRA)
+# 1. Load Data (All images and texts from test split)
+# 2. Load models (FP32, FP16, LoRA, QLoRA, or Baseline)
 # 3. Calculate Embeddings for all images and texts
 # 4. Calculate Similarity Matrix
 # 5. Calculate Metrics (recall@K, mAP@K, MRR, mean loss, mean similarity)
 # 6. Store Results
 # 7. Generate Summary Report
+#
+# EVALUATION SETUP (1-to-1 matching):
+# - Test set has 100 samples: 1 image per game with its description
+# - Each text[i] has exactly ONE correct image[i] (diagonal of similarity matrix)
+# - Metrics measure how well the model ranks the correct image for each text query
 
 import argparse
 import csv
@@ -237,10 +242,11 @@ def main(args):
 
     # Step 2: Compute similarity matrix (text-to-image retrieval)
     # For each text query, compute similarity to all images
+    # Since we have 1-to-1 matching: text[i] should match with image[i]
     similarity_matrix = torch.matmul(text_embeddings, image_embeddings.T)  # [N, N]
 
     # Step 3: Calculate metrics
-    logging.info("Calculating metrics...")
+    logging.info("Calculating metrics for 1-to-1 matching...")
 
     # Mean cosine similarity (diagonal elements = correct pairs)
     mean_cosine_sim = torch.diagonal(similarity_matrix).mean().item()
@@ -252,10 +258,14 @@ def main(args):
     loss = torch.nn.functional.cross_entropy(logits, labels)
     mean_loss = loss.item()
 
-    # Correct indices (diagonal: text[i] matches image[i])
+    # Correct indices: text[i] matches image[i] (diagonal mapping)
+    # Each text has exactly ONE correct image at position i
     correct_indices = torch.arange(len(test_data))
 
-    # Compute retrieval metrics
+    # Compute retrieval metrics (now with 1-to-1 interpretation)
+    # - Recall@K: % of queries where correct image is in top-K
+    # - mAP@K: Average precision considering position within top-K
+    # - MRR: Average reciprocal rank of the correct image
     metrics = compute_all_metrics(similarity_matrix, correct_indices, k_values=[1, 5, 10])
 
     # Add additional metrics
@@ -271,17 +281,20 @@ def main(args):
             metrics_to_save[key] = value
 
     # Step 4: Log and save results
-    logging.info(f"Results for {args.technique.upper()}:")
+    logging.info(f"\nResults for {args.technique.upper()} (1-to-1 matching):")
     logging.info("=" * 50)
+    logging.info(f"Test set size: {len(test_data)} image-text pairs")
     logging.info(f"Mean Cosine Similarity: {mean_cosine_sim:.4f}")
     logging.info(f"Mean Loss: {mean_loss:.4f}")
-    logging.info(f"Recall@1: {metrics['recall@1'] * 100:.2f}%")
-    logging.info(f"Recall@5: {metrics['recall@5'] * 100:.2f}%")
-    logging.info(f"Recall@10: {metrics['recall@10'] * 100:.2f}%")
-    logging.info(f"mAP@1: {metrics['map@1'] * 100:.2f}%")
-    logging.info(f"mAP@5: {metrics['map@5'] * 100:.2f}%")
-    logging.info(f"mAP@10: {metrics['map@10'] * 100:.2f}%")
-    logging.info(f"MRR: {metrics['mrr'] * 100:.2f}%")
+    logging.info("-" * 50)
+    logging.info("Retrieval Metrics:")
+    logging.info(f"  Recall@1:  {metrics['recall@1'] * 100:.2f}% (exact match in top-1)")
+    logging.info(f"  Recall@5:  {metrics['recall@5'] * 100:.2f}% (correct image in top-5)")
+    logging.info(f"  Recall@10: {metrics['recall@10'] * 100:.2f}% (correct image in top-10)")
+    logging.info(f"  mAP@1:     {metrics['map@1'] * 100:.2f}%")
+    logging.info(f"  mAP@5:     {metrics['map@5'] * 100:.2f}%")
+    logging.info(f"  mAP@10:    {metrics['map@10'] * 100:.2f}%")
+    logging.info(f"  MRR:       {metrics['mrr'] * 100:.2f}%")
     logging.info("=" * 50)
 
     # Save results to file
