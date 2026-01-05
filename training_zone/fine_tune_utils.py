@@ -1,7 +1,5 @@
-import json
 import logging
 import os
-from datetime import datetime
 from io import BytesIO, StringIO
 
 import pandas as pd
@@ -53,22 +51,29 @@ def setup_config(technique):
     return CONFIG
 
 
-def setup_experiment_dir(CONFIG, base_path="trained_models/v1"):
-    """
-    Creates a unique folder for this training run and saves the config.
-    Structure: trained_models/v1/YYYYMMDD_HHMMSS_run_name/
-    """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_dir_name = f"{timestamp}_{CONFIG['technique']}"
-    run_dir = os.path.join(base_path, run_dir_name)
+# ============================================================================
+# DEPRECATED: Local experiment directory (no longer used)
+# ============================================================================
+# Models are now saved directly to MinIO, so we don't need local directories.
+# This function is kept for reference but is no longer called.
+# ============================================================================
 
-    os.makedirs(run_dir, exist_ok=True)
-
-    # Save information about hyperparameters
-    with open(os.path.join(run_dir, "hyperparameters.json"), "w") as f:
-        json.dump(CONFIG, f, indent=4)
-
-    return run_dir
+# def setup_experiment_dir(CONFIG, base_path="trained_models/v1"):
+#     """
+#     Creates a unique folder for this training run and saves the config.
+#     Structure: trained_models/v1/YYYYMMDD_HHMMSS_run_name/
+#     """
+#     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+#     run_dir_name = f"{timestamp}_{CONFIG['technique']}"
+#     run_dir = os.path.join(base_path, run_dir_name)
+#
+#     os.makedirs(run_dir, exist_ok=True)
+#
+#     # Save information about hyperparameters
+#     with open(os.path.join(run_dir, "hyperparameters.json"), "w") as f:
+#         json.dump(CONFIG, f, indent=4)
+#
+#     return run_dir
 
 
 class SteamDatasetHF(Dataset):

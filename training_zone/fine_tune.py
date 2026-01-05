@@ -2,10 +2,11 @@ import argparse
 import logging
 import os
 import tempfile
+from datetime import datetime
 
 import torch
 from dotenv import find_dotenv, load_dotenv
-from fine_tune_utils import SteamDatasetHF, setup_config, setup_experiment_dir
+from fine_tune_utils import SteamDatasetHF, setup_config
 from global_scripts.utils import minio_init
 from peft import LoraConfig, get_peft_model
 from torch.amp.autocast_mode import autocast
@@ -71,9 +72,10 @@ def main(args):
     val_csv_response = s3_client.get_object(Bucket=bucket, Key="data_splits/val.csv")
     val_csv_data = val_csv_response["Body"].read().decode("utf-8")
 
-    # Create directory to save metadata of trained model
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    run_dir = setup_experiment_dir(CONFIG, base_path=os.path.join(script_dir, "trained_models/v1"))
+    # Generate unique run identifier for saving to MinIO
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_name = f"{timestamp}_{technique}"
+    logging.info(f"Training run: {run_name}")
 
     if technique == "qlora":
         if CONFIG["device"] != "cuda":
@@ -208,7 +210,7 @@ def main(args):
 
             # Save to MinIO storage
             bucket = os.getenv("TRAINING_ZONE_BUCKET", "training-zone")
-            minio_model_path = f"models/{technique}/{os.path.basename(run_dir)}"
+            minio_model_path = f"models/{technique}/{run_name}"
             logging.info(f"New best model found. Saving to MinIO: {bucket}/{minio_model_path}...")
 
             save_model_to_minio(s3_client, model, processor, bucket, minio_model_path)
