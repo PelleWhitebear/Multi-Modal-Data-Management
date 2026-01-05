@@ -10,18 +10,18 @@ from torchvision import transforms  # Keep for optional on-the-fly augmentation
 
 BASE_CONFIG = {
     "model_id": "openai/clip-vit-base-patch32",
-    "epochs": 10,
-    "batch_size": 16,
-    # "learning_rate": 5e-6,
-    "learning_rate": 3e-5,
+    "epochs":100,
+    "batch_size": 8,
+    "learning_rate": 5e-6,
+    #"learning_rate": 3e-5,
     "patience": 5,
     "weight_decay": 0.1,
     "device": "cuda" if torch.cuda.is_available() else "cpu",
 }
 
 LORA_CONFIG = {
-    "lora_r": 4,  # Rank of the LoRA matrices
-    "lora_alpha": 4,  # Alphascaling factor
+    "lora_r": 16,  # Rank of the LoRA matrices
+    "lora_alpha": 16,  # Alphascaling factor
     "lora_matrices": [
         "q_proj",
         "v_proj",

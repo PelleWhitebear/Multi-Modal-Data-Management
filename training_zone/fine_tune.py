@@ -230,7 +230,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--technique",
         type=str,
-        choices=["baseline", "fp32", "fp16", "lora", "qlora"],
+        choices=["fp32", "fp16", "lora", "qlora"],
         default="fp32",
         help="Fine-tuning technique to use.",
     )
