@@ -13,8 +13,7 @@ Part 1 implemented an end-to-end Data Warehouse ETL pipeline.
 2.  Place the provided `.env` file in the root directory.
 3.  Build and start the Docker container:
     ```bash
-    docker compose build
-    docker compose up -d streamlit
+    docker compose build pipeline
     ```
 
 ### 2. Data Preparation (Skip Pipeline)
