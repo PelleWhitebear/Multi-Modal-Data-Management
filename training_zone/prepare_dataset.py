@@ -8,7 +8,7 @@ from io import BytesIO
 import boto3
 import pandas as pd
 from dotenv import find_dotenv, load_dotenv
-from global_scripts.utils import delete_items
+from global_scripts.utils import create_bucket, delete_items
 from PIL import Image
 
 load_dotenv(find_dotenv())
@@ -31,6 +31,12 @@ def prepare_dataset(s3_client):
     """
     exploitation_bucket = os.getenv("EXPLOITATION_ZONE_BUCKET")
     training_bucket = os.getenv("TRAINING_ZONE_BUCKET")
+
+    # Ensure training-zone bucket exists
+    logging.info("Checking if training-zone bucket exists...")
+    if not create_bucket(s3_client, training_bucket):
+        logging.error("Failed to create or access training-zone bucket. Aborting.")
+        return
 
     # Clear training-zone bucket
     logging.info("Clearing training-zone bucket...")
