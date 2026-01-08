@@ -42,7 +42,7 @@ docker compose run pipeline python training_zone/data_augmentation.py
 ### 4. Fine-Tuning the Model
 You can now fine-tune the CLIP model. Use the --technique flag to specify the method. Available techniques: fp32, fp16, lora, qlora.
 
-Example: Train using QLoRA:
+Example - Train using QLoRA:
 ```bash
 docker compose run pipeline python training_zone/fine_tune.py --technique qlora
 ```
@@ -51,12 +51,12 @@ The model checkpoints will be automatically saved to MinIO.
 ### 5. Running Experiments
 After training, evaluate the model on the test set to obtain retrieval metrics (Recall@K, mAP, MRR).
 
-Example: Evaluate QLoRA model
+Example - Evaluate QLoRA model:
 ```bash
 docker compose run pipeline python training_zone/experiments.py --technique qlora
 ```
 
-Baseline Evaluation To evaluate the pre-trained CLIP model without fine-tuning:
+Baseline evaluation to evaluate the pre-trained CLIP model without fine-tuning:
 ```bash
 docker compose run pipeline python training_zone/experiments.py --technique baseline
 ```
