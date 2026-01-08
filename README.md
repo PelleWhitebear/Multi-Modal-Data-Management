@@ -53,7 +53,7 @@ After training, evaluate the model on the test set to obtain retrieval metrics (
 
 Example: Evaluate QLoRA model
 ```bash
-docker compose exec streamlit python training_zone.experiments --technique qlora
+docker compose run pipeline python training_zone/experiments.py --technique qlora
 ```
 
 Baseline Evaluation To evaluate the pre-trained CLIP model without fine-tuning:
