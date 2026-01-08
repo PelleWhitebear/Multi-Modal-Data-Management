@@ -24,3 +24,5 @@ transformers
 # torchvision>=0.21.0
 bitsandbytes
 peft
+matplotlib
+seaborn
