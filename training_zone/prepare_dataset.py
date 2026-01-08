@@ -98,7 +98,7 @@ def prepare_dataset(s3_client):
     logging.info(f"Found images for {len(images_per_game)} games.")
 
     # Step 4: For each game, randomly select images for train/val/test
-    random.seed(42)  # For reproducibility
+    random.seed(42)  
     train_data = []
     val_data = []
     test_data = []

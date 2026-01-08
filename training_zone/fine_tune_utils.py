@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
-from torchvision import transforms  # Keep for optional on-the-fly augmentation
+from torchvision import transforms  
 
 BASE_CONFIG = {
     "model_id": "openai/clip-vit-base-patch32",
@@ -25,7 +25,7 @@ LORA_CONFIG = {
     "lora_matrices": [
         "q_proj",
         "v_proj",
-    ],  # we can try adding "k_proj", "out_proj" or even MLP layers ("gate_proj", "up_proj")
+    ],  
     "lora_dropout": 0.3,
     "device": "cuda" if torch.cuda.is_available() else "cpu",
 }
@@ -51,31 +51,6 @@ def setup_config(technique):
     return CONFIG
 
 
-# ============================================================================
-# DEPRECATED: Local experiment directory (no longer used)
-# ============================================================================
-# Models are now saved directly to MinIO, so we don't need local directories.
-# This function is kept for reference but is no longer called.
-# ============================================================================
-
-# def setup_experiment_dir(CONFIG, base_path="trained_models/v1"):
-#     """
-#     Creates a unique folder for this training run and saves the config.
-#     Structure: trained_models/v1/YYYYMMDD_HHMMSS_run_name/
-#     """
-#     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-#     run_dir_name = f"{timestamp}_{CONFIG['technique']}"
-#     run_dir = os.path.join(base_path, run_dir_name)
-#
-#     os.makedirs(run_dir, exist_ok=True)
-#
-#     # Save information about hyperparameters
-#     with open(os.path.join(run_dir, "hyperparameters.json"), "w") as f:
-#         json.dump(CONFIG, f, indent=4)
-#
-#     return run_dir
-
-
 class SteamDatasetHF(Dataset):
     def __init__(self, s3_client, csv_data, processor):
         """
@@ -91,7 +66,7 @@ class SteamDatasetHF(Dataset):
         """
         self.s3_client = s3_client
 
-        # Accept DataFrame or CSV content
+        # Accept DataFrame or CSV
         if isinstance(csv_data, pd.DataFrame):
             self.data = csv_data
         elif isinstance(csv_data, (str, bytes)):
@@ -135,7 +110,7 @@ class SteamDatasetHF(Dataset):
 # ============================================================================
 # OPTIONAL: Dataset with On-The-Fly Augmentation
 # ============================================================================
-# This class is kept for backward compatibility or if you want to revert
+# This class is kept for backward compatibility or if wanted to revert
 # to on-the-fly augmentation instead of pre-computed augmented images.
 # To use it, replace SteamDatasetHF with SteamDatasetHF_WithAugmentation
 # in fine_tune.py and pass is_train=True for training data.

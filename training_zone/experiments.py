@@ -100,7 +100,6 @@ def load_model_from_minio(s3_client, technique, device):
             logging.info(f"Downloaded {relative_path} from {bucket}/{key}")
 
         # Load model and processor from temporary directory
-        # Check if it's a PEFT model by looking for adapter_config.json
         adapter_config_path = os.path.join(temp_dir, "adapter_config.json")
 
         if os.path.exists(adapter_config_path):
