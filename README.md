@@ -14,6 +14,7 @@ Part 1 implemented an end-to-end Data Warehouse ETL pipeline.
 3.  Build and start the Docker container:
     ```bash
     docker compose build pipeline
+    docker compose up -d minio
     ```
 
 ### 2. Data Preparation (Skip Pipeline)
