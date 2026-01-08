@@ -371,7 +371,7 @@ def main():
     logging.info("=" * 60)
 
     baseline_model, baseline_processor = load_model_from_minio(s3_client, "baseline", device)
-    fp16_model, fp16_processor = load_model_from_minio(s3_client, "lora", device)
+    fp16_model, fp16_processor = load_model_from_minio(s3_client, "fp16", device)
 
     # Step 2: Load all games data
     logging.info("\n" + "=" * 60)
