@@ -10,7 +10,7 @@ from torchvision import transforms
 
 BASE_CONFIG = {
     "model_id": "openai/clip-vit-base-patch32",
-    "epochs":100,
+    "epochs": 1,
     "batch_size": 8,
     "learning_rate": 5e-6,
     #"learning_rate": 3e-5,

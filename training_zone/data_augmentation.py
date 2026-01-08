@@ -178,8 +178,8 @@ def main():
 
     logging.info("Data augmentation completed successfully!")
     logging.info(f"Training images: {len(updated_train_df)}")
-    logging.info(f"  - Original: {len(train_df)}")
-    logging.info(f"  - Augmented: {len(augmented_df)}")
+    logging.info(f"  Original: {len(train_df)}")
+    logging.info(f"  Augmented: {len(augmented_df)}")
 
 
 if __name__ == "__main__":
