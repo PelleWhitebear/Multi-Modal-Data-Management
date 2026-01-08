@@ -1,0 +1,36 @@
+{
+    "analysis_a_top3_largest_differences": [
+        {
+            "game_id": "440",
+            "difference": 0.44816863536834717,
+            "description": "Team Fortress 2 is a free-to-play action game featuring nine distinct classes, each offering a unique range of tactical abilities and personalities suited to various player skills. This popular online..."
+        },
+        {
+            "game_id": "632470",
+            "difference": 0.44140830636024475,
+            "description": "Disco Elysium - The Final Cut is a definitive edition role playing game where players embody a detective with a unique skill system and a city block to explore. The game features full English voice ac..."
+        },
+        {
+            "game_id": "590380",
+            "difference": 0.43604227900505066,
+            "description": "Into the Breach is an indie strategy simulation game where players control futuristic mechs to defend humanity from an alien threat. The game features turn-based combat with procedurally generated cha..."
+        }
+    ],
+    "analysis_b_top3_lowest_similarity": [
+        {
+            "game_id": "546560",
+            "avg_similarity": 0.2147516280412674,
+            "description": "Half-Life: Alyx represents Valve's return to the Half-Life series, designed specifically for virtual reality. This action-adventure game is set between the events of Half-Life and Half-Life 2, detaili..."
+        },
+        {
+            "game_id": "287700",
+            "avg_similarity": 0.2167910486459732,
+            "description": "METAL GEAR SOLID V: THE PHANTOM PAIN, an action-adventure experience from Konami Digital Entertainment, ushers in a new era for the franchise utilizing cutting-edge Fox Engine technology. This install..."
+        },
+        {
+            "game_id": "440",
+            "avg_similarity": 0.22155344486236572,
+            "description": "Team Fortress 2 is a free-to-play action game featuring nine distinct classes, each offering a unique range of tactical abilities and personalities suited to various player skills. This popular online..."
+        }
+    ]
+}

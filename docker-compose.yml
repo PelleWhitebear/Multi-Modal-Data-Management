@@ -11,6 +11,12 @@ services:
       MINIO_ROOT_USER: ROOTNAME
       MINIO_ROOT_PASSWORD: CHANGEME123
     command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   chroma:
     image: chromadb/chroma
@@ -23,14 +29,29 @@ services:
       - IS_PERSISTENT=TRUE
       - PERSIST_DIRECTORY=/chroma
 
-  # pipeline:
-  #   build: .
-  #   container_name: pipeline
-  #   depends_on:
-  #     - minio
-  #     - chroma
-  #   stdin_open: true
-  #   tty: true
+  pipeline:
+    build: .
+    container_name: pipeline
+    volumes:
+      - ./:/app
+    environment:
+      - PYTHONPATH=/app
+    depends_on:
+      minio:
+        condition: service_healthy
+      chroma:
+        condition: service_started
+
+    stdin_open: true
+    tty: true
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1  
+              capabilities: [gpu]
 
   streamlit:
     build: .
